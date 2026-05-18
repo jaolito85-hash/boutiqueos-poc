@@ -1,0 +1,87 @@
+{
+  "_comentario": "Lista de lojas-alvo da haus. Pra adicionar, copia uma entrada e ajusta. Ordem importa: tier 1 primeiro.",
+  "lojas": [
+    {
+      "username": "decorartemaringa",
+      "tier": 1,
+      "cidade": "Maringá",
+      "seguidores_aprox": 55000,
+      "max_seguidoras_por_run": 100,
+      "ativo": true
+    },
+    {
+      "username": "lacasapresentes",
+      "tier": 1,
+      "cidade": "Maringá",
+      "seguidores_aprox": 15000,
+      "max_seguidoras_por_run": 100,
+      "ativo": true
+    },
+    {
+      "username": "casaflormaringa",
+      "tier": 1,
+      "cidade": "Maringá",
+      "seguidores_aprox": 6400,
+      "max_seguidoras_por_run": 80,
+      "ativo": true
+    },
+    {
+      "username": "affloraatelie",
+      "tier": 1,
+      "cidade": "Maringá",
+      "seguidores_aprox": 17000,
+      "max_seguidoras_por_run": 80,
+      "ativo": true
+    },
+    {
+      "username": "griffdacasa",
+      "tier": 2,
+      "cidade": "Curitiba",
+      "seguidores_aprox": 115000,
+      "max_seguidoras_por_run": 100,
+      "ativo": true
+    },
+    {
+      "username": "amandalimainteriores",
+      "tier": 2,
+      "cidade": "Curitiba",
+      "seguidores_aprox": 125000,
+      "max_seguidoras_por_run": 100,
+      "ativo": true
+    },
+    {
+      "username": "floriculturaflorescuritiba",
+      "tier": 2,
+      "cidade": "Curitiba",
+      "seguidores_aprox": 34000,
+      "max_seguidoras_por_run": 80,
+      "ativo": true
+    },
+    {
+      "username": "brunabundchenarquitetura",
+      "tier": 2,
+      "cidade": "Curitiba",
+      "seguidores_aprox": 31000,
+      "max_seguidoras_por_run": 80,
+      "ativo": true
+    },
+    {
+      "username": "tullistudio",
+      "tier": 2,
+      "cidade": "Curitiba",
+      "seguidores_aprox": 14000,
+      "max_seguidoras_por_run": 60,
+      "ativo": false,
+      "_motivo_inativo": "Liga depois quando primeiro batch validar"
+    },
+    {
+      "username": "karensalomons",
+      "tier": 2,
+      "cidade": "Curitiba",
+      "seguidores_aprox": 7500,
+      "max_seguidoras_por_run": 60,
+      "ativo": false,
+      "_motivo_inativo": "Liga depois"
+    }
+  ]
+}

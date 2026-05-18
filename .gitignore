@@ -1,0 +1,41 @@
+# Dados sensíveis
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+credentials.json
+config/secrets.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+venv/
+.venv/
+env/
+
+# Node
+node_modules/
+.next/
+.nuxt/
+dist/
+build/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+.DS_Store
+.claude/
+
+# Logs
+*.log
+logs/
+
+# Database local
+*.sqlite
+*.db
+
+# Mídia local (fotos reais de produtos/clientes, vídeos gerados, pacotes)
+media/

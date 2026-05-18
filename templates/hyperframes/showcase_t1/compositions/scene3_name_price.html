@@ -1,0 +1,88 @@
+<template id="haus-name-template">
+  <div data-composition-id="haus-name" data-width="1080" data-height="1920">
+    <div class="name-wrap">
+      <div class="name-line top"></div>
+      <div class="name-collection" id="haus-name-collection">{{COLLECTION_LABEL}}</div>
+      <div class="name-product" id="haus-name-product">{{PRODUCT_NAME}}</div>
+      <div class="name-line bottom"></div>
+      <div class="name-price-label" id="haus-name-price-label">A PARTIR DE</div>
+      <div class="name-price" id="haus-name-price">{{PRICE}}</div>
+    </div>
+
+    <style>
+      [data-composition-id="haus-name"] {
+        position: absolute; inset: 0;
+        background: #F7F4EE;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 100px;
+      }
+      [data-composition-id="haus-name"] .name-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+        max-width: 880px;
+        text-align: center;
+      }
+      [data-composition-id="haus-name"] .name-line {
+        width: 60px;
+        height: 1px;
+        background: #9C8A5C;
+      }
+      [data-composition-id="haus-name"] .name-collection {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 500;
+        font-size: 26px;
+        letter-spacing: 0.35em;
+        color: #5D6E55;
+        text-transform: uppercase;
+      }
+      [data-composition-id="haus-name"] .name-product {
+        font-family: 'Fraunces', serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 110px;
+        line-height: 1.05;
+        color: #1F2426;
+        max-width: 880px;
+      }
+      [data-composition-id="haus-name"] .name-price-label {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 400;
+        font-size: 20px;
+        letter-spacing: 0.4em;
+        color: #5C5C56;
+        text-transform: uppercase;
+      }
+      [data-composition-id="haus-name"] .name-price {
+        font-family: 'Fraunces', serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 100px;
+        line-height: 1;
+        color: #2B3D7E;
+        letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        tl.from("[data-composition-id='haus-name'] .name-line.top", { scaleX: 0, opacity: 0, duration: 0.6, ease: "power3.out", transformOrigin: "center" }, 0.15);
+        tl.from("#haus-name-collection", { y: 16, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.25);
+        tl.from("#haus-name-product", { y: 32, opacity: 0, duration: 1.0, ease: "expo.out" }, 0.45);
+        tl.from("[data-composition-id='haus-name'] .name-line.bottom", { scaleX: 0, opacity: 0, duration: 0.6, ease: "power3.out", transformOrigin: "center" }, 0.9);
+        tl.from("#haus-name-price-label", { y: 12, opacity: 0, duration: 0.6, ease: "power2.out" }, 1.05);
+        tl.from("#haus-name-price", { y: 28, opacity: 0, duration: 0.9, ease: "power3.out" }, 1.2);
+
+        window.__timelines["haus-name"] = tl;
+      })();
+    </script>
+  </div>
+</template>

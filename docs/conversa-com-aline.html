@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estratégia outbound — haus tableware</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBFAF6;
+    --paper: #FFFFFF;
+    --ink: #1F2426;
+    --ink-soft: #4A4F52;
+    --ink-muted: #888880;
+    --sage: #8B9A82;
+    --sage-deep: #5D6E55;
+    --gold: #B8A876;
+    --rose: #C77B5C;
+    --danger: #B85450;
+    --line: rgba(31, 36, 38, 0.10);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Outfit', -apple-system, sans-serif;
+    font-weight: 300;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--paper);
+    padding: 80px 64px;
+    min-height: 100vh;
+  }
+  @media (max-width: 640px) {
+    .page { padding: 48px 28px; }
+  }
+
+  /* Header */
+  header { text-align: center; margin-bottom: 56px; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
+  .brand {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 28px;
+    color: var(--ink);
+  }
+  .brand-tag {
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 6px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 38px;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-top: 32px;
+    letter-spacing: -0.015em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--ink-soft);
+    margin-top: 18px;
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.55;
+  }
+
+  /* Eyebrow */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+    margin-bottom: 18px;
+  }
+  .eyebrow::before, .eyebrow::after {
+    content: ''; width: 28px; height: 1px; background: var(--sage);
+  }
+
+  /* Sections */
+  section { margin: 56px 0; }
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.25;
+    color: var(--ink);
+    margin-bottom: 18px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--ink);
+    margin: 28px 0 10px;
+    letter-spacing: 0.02em;
+  }
+  p { font-size: 16px; color: var(--ink-soft); margin-bottom: 16px; }
+  strong { color: var(--ink); font-weight: 500; }
+  em { font-style: italic; color: var(--ink); }
+
+  /* Stat / number boxes */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 32px 0;
+  }
+  @media (max-width: 580px) { .stats { grid-template-columns: 1fr; } }
+  .stat {
+    background: #F7F4EE;
+    padding: 24px 20px;
+    border-radius: 6px;
+    text-align: center;
+  }
+  .stat__number {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .stat__label {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+  }
+
+  /* Risk callout */
+  .callout {
+    background: #FAF2EE;
+    border-left: 3px solid var(--rose);
+    padding: 22px 26px;
+    margin: 28px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout__title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 19px;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .callout p { font-size: 14.5px; margin-bottom: 8px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* Risk list */
+  .risks {
+    list-style: none;
+    margin: 20px 0;
+  }
+  .risks li {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .risks li:last-child { border-bottom: 0; }
+  .risk-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #FAF2EE;
+    color: var(--rose);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 500;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .risk-content strong { display: block; margin-bottom: 4px; font-size: 15px; }
+  .risk-content span { font-size: 14px; color: var(--ink-soft); }
+
+  /* Options */
+  .options { margin: 28px 0; }
+  .option {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 28px 28px 24px;
+    margin-bottom: 16px;
+  }
+  .option.recommended {
+    border-color: var(--sage);
+    background: #FAFCF8;
+    position: relative;
+  }
+  .option.recommended::before {
+    content: 'Recomendado';
+    position: absolute;
+    top: -12px; left: 24px;
+    background: var(--sage-deep);
+    color: white;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  .option__head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
+  .option__letter {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 32px;
+    color: var(--sage-deep);
+    line-height: 1;
+  }
+  .option__title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  .option__pros, .option__cons {
+    margin-top: 14px;
+    padding-left: 8px;
+  }
+  .option__pros li, .option__cons li {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    list-style: none;
+    padding-left: 20px;
+    position: relative;
+  }
+  .option__pros li::before {
+    content: '✓';
+    position: absolute; left: 0;
+    color: var(--sage-deep);
+    font-weight: 500;
+  }
+  .option__cons li::before {
+    content: '–';
+    position: absolute; left: 0;
+    color: var(--rose);
+    font-weight: 500;
+  }
+  .option__verdict {
+    font-size: 13.5px;
+    color: var(--ink);
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    font-style: italic;
+  }
+
+  /* Protocol rules */
+  .protocol {
+    background: #FAFCF8;
+    border-radius: 8px;
+    padding: 28px 32px;
+    margin: 24px 0;
+  }
+  .protocol h3 {
+    margin-top: 0;
+    color: var(--sage-deep);
+  }
+  .protocol ol {
+    padding-left: 20px;
+    margin: 14px 0 0;
+  }
+  .protocol li {
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+    line-height: 1.55;
+  }
+  .protocol li strong { color: var(--ink); }
+
+  /* Divider */
+  .divider {
+    text-align: center;
+    margin: 56px 0;
+    color: var(--sage);
+    font-size: 14px;
+  }
+  .divider::before, .divider::after {
+    content: '——————';
+    color: var(--line);
+    margin: 0 14px;
+  }
+
+  /* Closing */
+  .closing {
+    text-align: center;
+    padding: 40px 24px 0;
+    border-top: 1px solid var(--line);
+    margin-top: 64px;
+  }
+  .closing__text {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--ink);
+    line-height: 1.5;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .closing__sub {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-top: 16px;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <p class="brand">haus<span style="color: var(--gold);">.</span></p>
+    <p class="brand-tag">tableware</p>
+    <h1>Vamos atrair mais<br>clientes para o grupo VIP</h1>
+    <p class="lead">
+      Antes de começar, preciso que você entenda exatamente
+      o que vamos fazer e os riscos envolvidos.
+    </p>
+  </header>
+
+  <section>
+    <span class="eyebrow">A estratégia</span>
+    <h2>O plano em três passos simples</h2>
+    <p>
+      A ideia é abordar mulheres que <em>já</em> seguem lojas
+      parecidas com a haus em Maringá e Curitiba. Pessoas
+      que já curtem decoração, mesa posta, casa bonita. Esse é
+      nosso público.
+    </p>
+    <p>
+      Em vez de você abordar 200 perfis aleatórios e perder
+      tempo, <strong>uma inteligência artificial</strong> vai analisar os
+      perfis e te entregar só os 30 mais promissores do dia,
+      <strong>com uma mensagem personalizada</strong> pra cada uma.
+      Você só precisa copiar, colar e enviar.
+    </p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat__number">10</div>
+        <div class="stat__label">Lojas-alvo<br>para começar</div>
+      </div>
+      <div class="stat">
+        <div class="stat__number">~500</div>
+        <div class="stat__label">Perfis<br>analisados/semana</div>
+      </div>
+      <div class="stat">
+        <div class="stat__number">15</div>
+        <div class="stat__label">DMs<br>por dia (limite)</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">O ponto sensível</span>
+    <h2>Os riscos que você precisa conhecer</h2>
+    <p>
+      O Instagram <em>não gosta</em> quando uma conta começa a mandar
+      muitas DMs pra gente que não segue você. Mesmo que sejam
+      mensagens educadas e bem-feitas, o algoritmo pode entender como spam.
+    </p>
+    <p>
+      <strong>O que pode acontecer com sua conta pessoal, em ordem do mais leve pro mais grave:</strong>
+    </p>
+
+    <ul class="risks">
+      <li>
+        <span class="risk-icon">1</span>
+        <div class="risk-content">
+          <strong>Shadowban (mais comum)</strong>
+          <span>O Instagram silenciosamente reduz o alcance dos seus posts. Seus stories somem do feed dos amigos. Sem aviso, sem mensagem. Você só percebe quando ninguém comenta mais.</span>
+        </div>
+      </li>
+      <li>
+        <span class="risk-icon">2</span>
+        <div class="risk-content">
+          <strong>Suspensão temporária</strong>
+          <span>Entre 1 e 30 dias sem poder mandar DM, sem poder seguir ninguém novo. Acontece se mandar muitas DMs ou se 3 pessoas reportarem você.</span>
+        </div>
+      </li>
+      <li>
+        <span class="risk-icon">3</span>
+        <div class="risk-content">
+          <strong>Banimento permanente (raro mas existe)</strong>
+          <span>A conta é apagada de vez. Fotos da família, conversas, lembranças, tudo. Não tem como recuperar.</span>
+        </div>
+      </li>
+    </ul>
+
+    <div class="callout">
+      <div class="callout__title">Sendo honesto com você</div>
+      <p>
+        Esses riscos são <em>reais</em>, não invenção minha. Eu já vi
+        contas serem afetadas. Mas também já vi muitas operações
+        funcionarem por anos sem nenhum problema, desde que sigam regras claras.
+      </p>
+      <p>
+        A pergunta é: você está disposta a correr esse risco com
+        sua conta pessoal? Ou prefere outra opção?
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Suas opções</span>
+    <h2>Três caminhos possíveis</h2>
+    <p>
+      Não tem certo e errado. Tem o que faz sentido pra você
+      neste momento. Aqui estão as três opções, com prós e contras:
+    </p>
+
+    <div class="options">
+
+      <div class="option">
+        <div class="option__head">
+          <span class="option__letter">A</span>
+          <span class="option__title">Usar minha conta pessoal</span>
+        </div>
+        <p>
+          O que combinamos originalmente. Mais simples, mais rápido
+          de começar.
+        </p>
+        <ul class="option__pros">
+          <li>Começa imediatamente, sem preparação</li>
+          <li>Sua conta já tem credibilidade (foto real, histórico)</li>
+        </ul>
+        <ul class="option__cons">
+          <li>Risco real de afetar sua conta pessoal</li>
+          <li>Se algo der errado, você perde algo seu</li>
+        </ul>
+        <p class="option__verdict">
+          Indicado se você quer testar rápido e topa o risco.
+        </p>
+      </div>
+
+      <div class="option recommended">
+        <div class="option__head">
+          <span class="option__letter">B</span>
+          <span class="option__title">Criar uma conta nova só pra prospecção</span>
+        </div>
+        <p>
+          Uma conta tipo @aline.haus ou @curadoria.haus. Você
+          aparece como representante da loja, não como você pessoal.
+        </p>
+        <ul class="option__pros">
+          <li>Sua conta pessoal fica 100% protegida</li>
+          <li>Mesmo se a conta nova for banida, ninguém perde nada</li>
+          <li>Aparenta mais profissional (representando a marca)</li>
+        </ul>
+        <ul class="option__cons">
+          <li>Precisa 1-2 semanas de "aquecimento" antes (postar, curtir, interagir normal)</li>
+          <li>Conversão um pouco menor no início (conta nova, sem histórico)</li>
+        </ul>
+        <p class="option__verdict">
+          Equilíbrio entre risco e resultado. É o que eu recomendo.
+        </p>
+      </div>
+
+      <div class="option">
+        <div class="option__head">
+          <span class="option__letter">C</span>
+          <span class="option__title">Focar primeiro no bot, depois no outbound</span>
+        </div>
+        <p>
+          Em vez de buscar clientes novos agora, atender melhor
+          quem já chega pelo Instagram. Construir um assistente
+          de IA no WhatsApp.
+        </p>
+        <ul class="option__pros">
+          <li>Zero risco pra sua conta</li>
+          <li>Resolve um problema que você já tem (atendimento sozinha)</li>
+          <li>Pode ser usado 24h por dia</li>
+        </ul>
+        <ul class="option__cons">
+          <li>Resultado visível leva 3-4 semanas</li>
+          <li>Não atrai clientes novos, só converte melhor os atuais</li>
+        </ul>
+        <p class="option__verdict">
+          Indicado se você quer construir base sólida antes de escalar.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Se você escolher A ou B</span>
+    <h2>As regras que vão te proteger</h2>
+    <p>
+      Independente da conta usada, vamos seguir essas regras
+      <em>não-negociáveis</em>. Elas são desenhadas pra minimizar
+      o risco de banimento:
+    </p>
+
+    <div class="protocol">
+      <h3>Protocolo de segurança</h3>
+      <ol>
+        <li>
+          <strong>Máximo 15 DMs por dia.</strong> Não 30, não 50. Quinze.
+          O Instagram tolera esse volume bem.
+        </li>
+        <li>
+          <strong>Intervalos aleatórios.</strong> Entre 8 e 20 minutos
+          entre uma DM e outra. O painel vai te avisar quando pode mandar a próxima.
+        </li>
+        <li>
+          <strong>Aquecimento prévio (se conta nova).</strong> 7 dias
+          antes de começar, a conta posta 1-2 vezes ao dia, segue uns 50
+          perfis relevantes, curte e comenta normalmente. Vira "humana"
+          aos olhos do Instagram.
+        </li>
+        <li>
+          <strong>Mensagens sempre personalizadas.</strong> A IA lê o perfil
+          da pessoa e cria uma frase específica pra cada uma. Nunca copia e cola
+          a mesma coisa.
+        </li>
+        <li>
+          <strong>Stop imediato se alguém reportar.</strong> O painel rastreia
+          quem respondeu negativamente. Se 2 ou mais reportarem como spam,
+          paramos por 1 semana.
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="divider">∗</div>
+
+  <div class="closing">
+    <p class="closing__text">
+      Você decide o caminho.<br>
+      Sem pressão. Pode pensar com calma.
+    </p>
+    <p class="closing__sub">
+      Qualquer dúvida, manda mensagem.
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

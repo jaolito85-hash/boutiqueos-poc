@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>haus — showcase T1</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,300;1,9..144,400&family=Outfit:wght@300;400;500&display=block"
+      rel="stylesheet"
+    />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #F7F4EE;
+        font-family: 'Outfit', sans-serif;
+        color: #1F2426;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="15"
+      data-width="1080"
+      data-height="1920"
+    >
+      <!--
+        Cenas com overlap de 0.6s para crossfade premium (blur + opacity).
+        Crossfade controlado pelo main timeline abaixo, animando opacity
+        do placeholder #scene-X (não da composição filha).
+      -->
+
+      <!-- Scene 1: Abertura "haus." (0 → 3.1s, fade out começa em 2.5s) -->
+      <div
+        id="scene-intro"
+        class="clip"
+        data-composition-id="haus-intro"
+        data-composition-src="compositions/scene1_intro.html"
+        data-start="0"
+        data-duration="3.1"
+        data-track-index="1"
+        data-width="1080"
+        data-height="1920"
+      ></div>
+
+      <!-- Scene 2: Foto com Ken Burns (2.5 → 8.6s) -->
+      <div
+        id="scene-photo"
+        class="clip"
+        data-composition-id="haus-photo"
+        data-composition-src="compositions/scene2_photo.html"
+        data-start="2.5"
+        data-duration="6.1"
+        data-track-index="2"
+        data-width="1080"
+        data-height="1920"
+      ></div>
+
+      <!-- Scene 3: Nome + Coleção + Preço (8.0 → 12.6s) -->
+      <div
+        id="scene-name"
+        class="clip"
+        data-composition-id="haus-name"
+        data-composition-src="compositions/scene3_name_price.html"
+        data-start="8.0"
+        data-duration="4.6"
+        data-track-index="3"
+        data-width="1080"
+        data-height="1920"
+      ></div>
+
+      <!-- Scene 4: CTA grupo VIP (12.0 → 15.0s) -->
+      <div
+        id="scene-cta"
+        class="clip"
+        data-composition-id="haus-cta"
+        data-composition-src="compositions/scene4_cta.html"
+        data-start="12.0"
+        data-duration="3.0"
+        data-track-index="4"
+        data-width="1080"
+        data-height="1920"
+      ></div>
+
+      <!--
+        Música de fundo (15s, volume 0.55).
+        Substitua o arquivo em assets/music.mp3 pelo MP3 da sua escolha
+        (recomendado: Pixabay Music, busca "calm piano" / "luxury ambient").
+        O placeholder atual é silencioso — se não trocar, o vídeo sai sem trilha.
+      -->
+      <audio
+        id="bg-music"
+        data-start="0"
+        data-duration="15"
+        data-track-index="9"
+        src="assets/music.mp3"
+        data-volume="0.55"
+      ></audio>
+    </div>
+
+    <script>
+      // Crossfade premium (calm/luxury) — sine.inOut 0.6s + leve blur/scale
+      window.__timelines = window.__timelines || {};
+      const mainTl = gsap.timeline({ paused: true });
+
+      // Helper para crossfade entre cenas no momento T (em segundos absolutos)
+      function crossfade(oldSel, newSel, T) {
+        // outgoing: blur sutil + scale up + fade
+        mainTl.fromTo(oldSel,
+          { opacity: 1, filter: "blur(0px)", scale: 1 },
+          { opacity: 0, filter: "blur(12px)", scale: 1.02, duration: 0.6, ease: "sine.inOut" },
+          T
+        );
+        // incoming: começa com blur + scale-down, vira sharp
+        mainTl.fromTo(newSel,
+          { opacity: 0, filter: "blur(12px)", scale: 0.98 },
+          { opacity: 1, filter: "blur(0px)", scale: 1, duration: 0.6, ease: "sine.inOut" },
+          T + 0.05
+        );
+      }
+
+      // Cenas 2, 3 e 4 começam transparentes (cena 1 visível por padrão)
+      mainTl.set("#scene-photo", { opacity: 0 }, 0);
+      mainTl.set("#scene-name", { opacity: 0 }, 0);
+      mainTl.set("#scene-cta", { opacity: 0 }, 0);
+
+      crossfade("#scene-intro", "#scene-photo", 2.5);
+      crossfade("#scene-photo", "#scene-name", 8.0);
+      crossfade("#scene-name", "#scene-cta", 12.0);
+
+      window.__timelines["main"] = mainTl;
+    </script>
+  </body>
+</html>
