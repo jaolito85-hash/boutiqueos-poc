@@ -392,6 +392,351 @@
   }
   .btn-novo:hover { background: var(--sage-deep); }
 
+  /* ============= IMPORT CSV ============= */
+  .outbound-toolbar {
+    max-width: 720px;
+    margin: 0 auto 16px;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 4px;
+  }
+  .btn-import-csv {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-import-csv:hover { border-color: var(--ink-muted); color: var(--ink); background: var(--bg-card); }
+  .csv-summary {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .csv-summary table { width: 100%; font-size: 12px; color: var(--ink-soft); }
+  .csv-summary td { padding: 3px 0; }
+  .csv-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  /* ============= TAB BADGE ============= */
+  .tab-badge {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--ink);
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    margin-left: 4px;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.5;
+    min-width: 18px;
+  }
+  .tab.active .tab-badge { background: var(--gold); color: var(--ink); }
+
+  /* ============= REVIEW VIEW ============= */
+  .review-wrap { max-width: 920px; margin: 0 auto; }
+  .review-toolbar {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .review-busca {
+    flex: 1 1 220px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .review-busca:focus { outline: none; border-color: var(--sage); }
+  .review-filter {
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--bg-card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .review-filter:focus { outline: none; border-color: var(--sage); }
+  .review-bulkbar {
+    background: var(--ink);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .review-bulkbar .bulk-count {
+    font-weight: 500;
+    margin-right: 8px;
+    color: var(--gold);
+  }
+  .review-bulkbar button {
+    background: rgba(255,255,255,0.12);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .review-bulkbar button:hover { background: rgba(255,255,255,0.22); }
+  .review-bulkbar button.danger { background: var(--danger); }
+  .review-bulkbar button.danger:hover { background: #b56548; }
+  .review-bulkbar button.primary { background: var(--success); }
+  .review-bulkbar button.primary:hover { background: var(--sage-deep); }
+  .review-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 4px 12px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .review-meta label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .review-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+    transition: opacity 0.2s, transform 0.2s, border-color 0.15s, background 0.15s;
+  }
+  .review-card.selected {
+    border-color: var(--sage-deep);
+    background: #f5faf3;
+  }
+  .review-card.focused {
+    outline: 2px solid var(--sage);
+    outline-offset: 2px;
+  }
+  .review-card.removing { opacity: 0; transform: scale(0.97); }
+  .review-checkbox {
+    margin-top: 4px;
+    cursor: pointer;
+    accent-color: var(--sage-deep);
+  }
+  .review-card-main { flex: 1; min-width: 0; }
+  .review-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .review-username {
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+    margin-right: 4px;
+    font-size: 14px;
+  }
+  .review-username:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.6;
+  }
+  .badge.plat-instagram { background: #fdf2f8; color: #be185d; }
+  .badge.plat-tiktok { background: #f4f4f5; color: #18181b; }
+  .badge.temp-quente { background: #fef2e8; color: #c2410c; }
+  .badge.temp-morno { background: #fef9c3; color: #854d0e; }
+  .badge.temp-frio { background: #e0f2fe; color: #075985; }
+  .badge.score { background: var(--ink); color: white; font-family: 'Fraunces', serif; font-style: italic; }
+  .badge.urg-alta { background: var(--danger); color: white; }
+  .intent-label {
+    font-size: 11px;
+    color: var(--ink-muted);
+    font-style: italic;
+    margin-left: 4px;
+  }
+  .review-evidencia {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+    padding: 4px 0 4px 12px;
+    border-left: 2px solid var(--line);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    line-height: 1.55;
+  }
+  .review-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .btn-mini {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--ink-soft);
+    text-decoration: none;
+    display: inline-block;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.15s;
+  }
+  .btn-mini:hover { background: var(--bg-card); color: var(--ink); border-color: var(--ink-muted); }
+  .btn-mini.btn-approve {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
+  .btn-mini.btn-approve:hover {
+    background: var(--sage-deep);
+    border-color: var(--sage-deep);
+    color: white;
+  }
+  .btn-mini.btn-discard {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+  .btn-mini.btn-discard:hover {
+    background: var(--danger);
+    color: white;
+  }
+  .review-edit {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .review-textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    resize: vertical;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .review-textarea:focus { outline: none; border-color: var(--sage); }
+  .review-edit-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    justify-content: flex-end;
+  }
+  .review-edit-hint {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+  .review-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0 8px;
+  }
+  .review-pagination button {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .review-pagination button:hover:not(:disabled) {
+    background: var(--bg-card);
+    border-color: var(--ink-muted);
+  }
+  .review-pagination button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .review-page-info {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .review-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-muted);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .review-shortcuts {
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 16px 0;
+  }
+  .toast.toast-undo {
+    background: var(--ink);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .toast.toast-undo button {
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+    font-family: 'Outfit', sans-serif;
+  }
+  .toast.toast-undo button:hover { background: #d4c08a; }
+
   .produto-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -977,6 +1322,7 @@
 
 <nav class="tabs">
   <button class="tab active" data-tab="outbound" onclick="setTab('outbound')">Outbound</button>
+  <button class="tab" data-tab="review" onclick="setTab('review')">Revisar <span class="tab-badge" id="tab-badge-review" hidden>0</span></button>
   <button class="tab" data-tab="catalogo" onclick="setTab('catalogo')">Catálogo</button>
 </nav>
 
@@ -1001,12 +1347,71 @@
     </div>
   </div>
 
+  <div class="outbound-toolbar">
+    <button type="button" class="btn-import-csv" onclick="abrirModalImportarCsv()">+ Importar leads (CSV)</button>
+  </div>
+
   <div class="card-wrap" id="content">
     <div class="loading">Carregando...</div>
   </div>
 
   <p class="shortcuts">
     Atalhos: <kbd>C</kbd> copiar · <kbd>E</kbd> enviei · <kbd>S</kbd> pular · <kbd>D</kbd> descartar
+  </p>
+</div>
+
+<!-- ============= VIEW: REVISAR ============= -->
+<div id="view-review" class="review-wrap" hidden>
+  <div class="review-toolbar">
+    <input type="search" class="review-busca" id="r-busca" placeholder="Buscar por @username ou fonte..." oninput="onBuscaInput(this.value)">
+    <select class="review-filter" id="r-plataforma" onchange="onFilterChange('plataforma', this.value)">
+      <option value="">Todas plataformas</option>
+      <option value="instagram">Instagram</option>
+      <option value="tiktok">TikTok</option>
+    </select>
+    <select class="review-filter" id="r-temperatura" onchange="onFilterChange('temperatura', this.value)">
+      <option value="">Toda temperatura</option>
+      <option value="quente">Quente</option>
+      <option value="morno">Morno</option>
+    </select>
+    <select class="review-filter" id="r-intent" onchange="onFilterChange('intent', this.value)">
+      <option value="">Todos os intents</option>
+      <option value="perguntando_preco">Perguntando preço</option>
+      <option value="buscando_atendimento">Buscando atendimento</option>
+      <option value="perguntando_local">Perguntando local</option>
+    </select>
+    <select class="review-filter" id="r-sort" onchange="onFilterChange('sort', this.value)">
+      <option value="score_desc">Maior score</option>
+      <option value="score_asc">Menor score</option>
+      <option value="recent">Mais recentes</option>
+      <option value="oldest">Mais antigos</option>
+    </select>
+  </div>
+
+  <div class="review-bulkbar" id="review-bulkbar" hidden>
+    <span class="bulk-count" id="review-selcount">0 selecionados</span>
+    <button type="button" class="primary" onclick="bulkAction('approve')">✓ Aprovar selecionados</button>
+    <button type="button" class="danger" onclick="bulkAction('discard')">✕ Descartar selecionados</button>
+    <button type="button" onclick="clearSelection()">Limpar seleção</button>
+  </div>
+
+  <div class="review-meta">
+    <label><input type="checkbox" id="review-sel-all" onclick="selectAllOnPage()"> Selecionar página</label>
+    <span id="review-total">— leads em revisão</span>
+  </div>
+
+  <div id="review-list">
+    <div class="loading">Carregando...</div>
+  </div>
+
+  <div class="review-pagination" id="review-pagination" hidden>
+    <button type="button" id="review-prev" onclick="reviewPrev()">‹ Anterior</button>
+    <span class="review-page-info" id="review-page-info">Página 1</span>
+    <button type="button" id="review-next" onclick="reviewNext()">Próxima ›</button>
+  </div>
+
+  <p class="review-shortcuts">
+    Atalhos: <kbd>J</kbd>/<kbd>K</kbd> navegar · <kbd>A</kbd> aprovar · <kbd>D</kbd> descartar · <kbd>E</kbd> editar · <kbd>X</kbd> selecionar
   </p>
 </div>
 
@@ -1071,6 +1476,16 @@
     const remaining = stats.daily_limit - stats.sent_today;
     document.getElementById('stat-remaining').textContent = remaining;
     document.getElementById('stat-review').textContent = stats.REVIEW || 0;
+
+    // Badge na tab "Revisar"
+    const reviewCount = stats.REVIEW || 0;
+    const badge = document.getElementById('tab-badge-review');
+    if (reviewCount > 0) {
+      badge.textContent = reviewCount > 99 ? '99+' : reviewCount;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
 
     // Pinta o card de "restam" se chegou perto do limite
     const card = document.getElementById('stat-card-remaining');
@@ -1242,8 +1657,10 @@
       t.classList.toggle('active', t.dataset.tab === tab);
     });
     document.getElementById('view-outbound').hidden = tab !== 'outbound';
+    document.getElementById('view-review').hidden = tab !== 'review';
     document.getElementById('view-catalogo').hidden = tab !== 'catalogo';
     if (tab === 'catalogo') loadCatalogo();
+    if (tab === 'review') loadReview({ resetPage: true });
   }
 
   // ============= CATÁLOGO =============
@@ -1968,6 +2385,459 @@
     } catch (e) {
       toast('Erro IA: ' + e.message, 'error');
       btn.disabled = false;
+    }
+  }
+
+  // ============= REVIEW =============
+  const reviewState = {
+    page: 1,
+    page_size: 30,
+    total: 0,
+    pages: 0,
+    items: [],
+    selected: new Set(),
+    focusIndex: -1,
+    filters: { plataforma: '', temperatura: '', intent: '', busca: '', sort: 'score_desc' },
+  };
+  let undoTimer = null;
+  let buscaTimer = null;
+
+  async function loadReview(opts) {
+    opts = opts || {};
+    if (opts.resetPage) reviewState.page = 1;
+    const list = document.getElementById('review-list');
+    list.innerHTML = '<div class="loading">Carregando...</div>';
+    const q = new URLSearchParams();
+    Object.entries(reviewState.filters).forEach(([k, v]) => { if (v) q.set(k, v); });
+    q.set('page', reviewState.page);
+    q.set('page_size', reviewState.page_size);
+    try {
+      const r = await fetch('/api/review/queue?' + q.toString());
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Erro', 'error'); list.innerHTML = ''; return; }
+      reviewState.total = j.total;
+      reviewState.pages = j.pages;
+      reviewState.items = j.items;
+      // Mantém apenas seleções dos itens ainda visíveis na página
+      const visibleIds = new Set(j.items.map(p => p.id));
+      reviewState.selected = new Set([...reviewState.selected].filter(id => visibleIds.has(id)));
+      reviewState.focusIndex = -1;
+      renderReview();
+    } catch (e) {
+      list.innerHTML = '<div class="review-empty">Erro de conexão. Tente recarregar.</div>';
+    }
+  }
+
+  function renderReview() {
+    const list = document.getElementById('review-list');
+    document.getElementById('review-total').textContent =
+      `${reviewState.total} lead${reviewState.total !== 1 ? 's' : ''} em revisão`;
+    if (!reviewState.items.length) {
+      list.innerHTML = '<div class="review-empty">Nenhum lead nesta combinação de filtros.</div>';
+      updateBulkBar();
+      updatePagination();
+      updateSelectAllCheckbox();
+      return;
+    }
+    list.innerHTML = reviewState.items.map((p, idx) => cardHtml(p, idx)).join('');
+    updateBulkBar();
+    updatePagination();
+    updateSelectAllCheckbox();
+  }
+
+  function cardHtml(p, idx) {
+    const plat = (p.plataforma || 'instagram').toLowerCase();
+    const temp = p.temperatura || '';
+    const urg = (p.urgencia || '').toLowerCase();
+    const intent = (p.intent || '').replace(/_/g, ' ');
+    const evidencia = escapeHtml(p.evidencia || p.texto_original || '(sem evidência)');
+    const score = (p.score != null ? p.score : 0);
+    const urlPost = p.url_post || '';
+    const urlPerfil = p.url_perfil || '';
+    const sel = reviewState.selected.has(p.id) ? 'selected' : '';
+    const foc = reviewState.focusIndex === idx ? 'focused' : '';
+    const usernameLink = urlPerfil
+      ? `<a class="review-username" href="${escapeHtml(urlPerfil)}" target="_blank" rel="noopener">@${escapeHtml(p.username)}</a>`
+      : `<span class="review-username">@${escapeHtml(p.username)}</span>`;
+    return `
+      <div class="review-card ${sel} ${foc}" data-id="${p.id}" data-idx="${idx}">
+        <input type="checkbox" class="review-checkbox" data-id="${p.id}"
+               onchange="toggleSelect(${p.id})" ${sel ? 'checked' : ''} aria-label="Selecionar @${escapeHtml(p.username)}">
+        <div class="review-card-main">
+          <div class="review-card-head">
+            ${usernameLink}
+            <span class="badge plat-${escapeHtml(plat)}">${escapeHtml(plat)}</span>
+            ${temp ? `<span class="badge temp-${escapeHtml(temp)}">${escapeHtml(temp)}</span>` : ''}
+            <span class="badge score">${score}/10</span>
+            ${urg === 'alta' ? `<span class="badge urg-alta">urgência alta</span>` : ''}
+            ${intent ? `<span class="intent-label">${escapeHtml(intent)}</span>` : ''}
+          </div>
+          <p class="review-evidencia">"${evidencia}"</p>
+          <div class="review-card-actions">
+            <button type="button" class="btn-mini btn-approve" onclick="approveOne(${p.id})">✓ Aprovar</button>
+            <button type="button" class="btn-mini btn-discard" onclick="discardOne(${p.id})">✕ Descartar</button>
+            <button type="button" class="btn-mini" onclick="toggleEdit(${p.id})">✎ Editar DM</button>
+            ${urlPost ? `<a class="btn-mini" href="${escapeHtml(urlPost)}" target="_blank" rel="noopener">↗ Ver post</a>` : ''}
+            ${p.source_loja ? `<span class="intent-label" style="margin-left:auto;">via ${escapeHtml(p.source_loja)}</span>` : ''}
+          </div>
+          <div class="review-edit" id="edit-${p.id}" hidden>
+            <textarea class="review-textarea" id="msg-${p.id}">${escapeHtml(p.mensagem || '')}</textarea>
+            <div class="review-edit-hint">Ctrl+Enter para salvar · Esc para cancelar</div>
+            <div class="review-edit-actions">
+              <button type="button" class="btn-mini" onclick="toggleEdit(${p.id})">Cancelar</button>
+              <button type="button" class="btn-mini btn-approve" onclick="saveMessage(${p.id})">Salvar mensagem</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateBulkBar() {
+    const bar = document.getElementById('review-bulkbar');
+    if (reviewState.selected.size > 0) {
+      bar.hidden = false;
+      document.getElementById('review-selcount').textContent =
+        `${reviewState.selected.size} selecionado${reviewState.selected.size > 1 ? 's' : ''}`;
+    } else {
+      bar.hidden = true;
+    }
+  }
+
+  function updatePagination() {
+    const pag = document.getElementById('review-pagination');
+    if (reviewState.pages <= 1) { pag.hidden = true; return; }
+    pag.hidden = false;
+    document.getElementById('review-page-info').textContent = `Página ${reviewState.page} de ${reviewState.pages}`;
+    document.getElementById('review-prev').disabled = reviewState.page <= 1;
+    document.getElementById('review-next').disabled = reviewState.page >= reviewState.pages;
+  }
+
+  function updateSelectAllCheckbox() {
+    const cb = document.getElementById('review-sel-all');
+    if (!reviewState.items.length) { cb.checked = false; cb.indeterminate = false; return; }
+    const selOnPage = reviewState.items.filter(p => reviewState.selected.has(p.id)).length;
+    cb.checked = selOnPage === reviewState.items.length;
+    cb.indeterminate = selOnPage > 0 && selOnPage < reviewState.items.length;
+  }
+
+  function toggleSelect(id) {
+    if (reviewState.selected.has(id)) reviewState.selected.delete(id);
+    else reviewState.selected.add(id);
+    const card = document.querySelector(`.review-card[data-id="${id}"]`);
+    if (card) card.classList.toggle('selected');
+    updateBulkBar();
+    updateSelectAllCheckbox();
+  }
+
+  function selectAllOnPage() {
+    const all = reviewState.items.every(p => reviewState.selected.has(p.id));
+    if (all) reviewState.items.forEach(p => reviewState.selected.delete(p.id));
+    else reviewState.items.forEach(p => reviewState.selected.add(p.id));
+    renderReview();
+  }
+
+  function clearSelection() {
+    reviewState.selected.clear();
+    renderReview();
+  }
+
+  function reviewPrev() {
+    if (reviewState.page > 1) { reviewState.page--; loadReview(); }
+  }
+  function reviewNext() {
+    if (reviewState.page < reviewState.pages) { reviewState.page++; loadReview(); }
+  }
+
+  function onFilterChange(field, value) {
+    reviewState.filters[field] = value;
+    loadReview({ resetPage: true });
+  }
+  function onBuscaInput(value) {
+    clearTimeout(buscaTimer);
+    buscaTimer = setTimeout(() => {
+      reviewState.filters.busca = value;
+      loadReview({ resetPage: true });
+    }, 280);
+  }
+
+  // ----- Ações individuais -----
+  async function approveOne(id) {
+    return actOne(id, 'approve', 'aprovado');
+  }
+  async function discardOne(id) {
+    return actOne(id, 'discard', 'descartado');
+  }
+
+  async function actOne(id, action, verb) {
+    const p = reviewState.items.find(x => x.id === id);
+    const username = p ? p.username : '';
+    const card = document.querySelector(`.review-card[data-id="${id}"]`);
+    if (card) card.classList.add('removing');
+    try {
+      const r = await fetch(`/api/review/prospect/${id}/${action}`, { method: 'POST' });
+      const j = await r.json();
+      if (!j.ok) {
+        toast(j.error || 'Erro', 'error');
+        if (card) card.classList.remove('removing');
+        return;
+      }
+      setTimeout(() => removeFromList([id], `@${username} ${verb}`, [id]), 180);
+    } catch (e) {
+      toast('Erro de conexão', 'error');
+      if (card) card.classList.remove('removing');
+    }
+  }
+
+  // ----- Bulk -----
+  async function bulkAction(action) {
+    const ids = Array.from(reviewState.selected);
+    if (!ids.length) return;
+    const verbo = action === 'approve' ? 'Aprovar' : 'Descartar';
+    if (!confirm(`${verbo} ${ids.length} lead${ids.length > 1 ? 's' : ''}?`)) return;
+    try {
+      const r = await fetch(`/api/review/bulk/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Erro', 'error'); return; }
+      const label = `${j.affected} lead${j.affected > 1 ? 's' : ''} ${action === 'approve' ? 'aprovado' + (j.affected > 1 ? 's' : '') : 'descartado' + (j.affected > 1 ? 's' : '')}`;
+      removeFromList(ids, label, ids);
+    } catch (e) {
+      toast('Erro de conexão', 'error');
+    }
+  }
+
+  function removeFromList(ids, label, undoIds) {
+    const setIds = new Set(ids);
+    reviewState.items = reviewState.items.filter(p => !setIds.has(p.id));
+    ids.forEach(i => reviewState.selected.delete(i));
+    reviewState.total = Math.max(0, reviewState.total - ids.length);
+    renderReview();
+    showUndoToast(label, undoIds);
+    loadStats();
+    // Se a página esvaziou e não é a primeira, volta uma página
+    if (reviewState.items.length === 0 && reviewState.page > 1) {
+      reviewState.page--;
+      loadReview();
+    } else if (reviewState.items.length === 0 && reviewState.total > 0) {
+      // Tinha mais nas próximas páginas
+      loadReview();
+    }
+  }
+
+  function showUndoToast(label, ids) {
+    clearTimeout(undoTimer);
+    const t = document.getElementById('toast');
+    t.className = 'toast show toast-undo';
+    const idsAttr = ids.join(',');
+    t.innerHTML = `<span>${escapeHtml(label)}</span><button type="button" data-undo-ids="${idsAttr}">Desfazer</button>`;
+    t.querySelector('button').addEventListener('click', () => {
+      const list = idsAttr.split(',').filter(Boolean).map(n => parseInt(n, 10));
+      undoAction(list);
+    });
+    undoTimer = setTimeout(() => { t.className = 'toast'; t.innerHTML = ''; }, 6000);
+  }
+
+  async function undoAction(ids) {
+    clearTimeout(undoTimer);
+    document.getElementById('toast').className = 'toast';
+    try {
+      const r = await fetch('/api/review/bulk/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Erro', 'error'); return; }
+      toast(`✓ ${j.affected} lead${j.affected > 1 ? 's' : ''} restaurado${j.affected > 1 ? 's' : ''}`);
+      loadReview();
+      loadStats();
+    } catch (e) {
+      toast('Erro de conexão', 'error');
+    }
+  }
+
+  // ----- Editar mensagem -----
+  function toggleEdit(id) {
+    const div = document.getElementById(`edit-${id}`);
+    if (!div) return;
+    div.hidden = !div.hidden;
+    if (!div.hidden) {
+      const ta = document.getElementById(`msg-${id}`);
+      setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 50);
+    }
+  }
+
+  async function saveMessage(id) {
+    const ta = document.getElementById(`msg-${id}`);
+    if (!ta) return;
+    const msg = ta.value.trim();
+    if (!msg) { toast('Mensagem vazia', 'error'); return; }
+    try {
+      const r = await fetch(`/api/review/prospect/${id}/message`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensagem: msg }),
+      });
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Erro', 'error'); return; }
+      const p = reviewState.items.find(x => x.id === id);
+      if (p) p.mensagem = msg;
+      toast('✓ Mensagem salva');
+      document.getElementById(`edit-${id}`).hidden = true;
+    } catch (e) {
+      toast('Erro de conexão', 'error');
+    }
+  }
+
+  // ----- Keyboard shortcuts (J/K/A/D/E/X) -----
+  document.addEventListener('keydown', (ev) => {
+    if (currentTab !== 'review') return;
+    const tag = (ev.target.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'SELECT') return;
+    if (tag === 'TEXTAREA') {
+      // Ctrl+Enter salva, Esc fecha
+      const m = ev.target.id.match(/^msg-(\d+)$/);
+      if (!m) return;
+      const id = parseInt(m[1], 10);
+      if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); saveMessage(id); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); toggleEdit(id); }
+      return;
+    }
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    const key = ev.key.toLowerCase();
+    if (key === 'j') { ev.preventDefault(); focusNext(1); }
+    else if (key === 'k') { ev.preventDefault(); focusNext(-1); }
+    else if (key === 'a' && reviewState.focusIndex >= 0) { ev.preventDefault(); approveOne(reviewState.items[reviewState.focusIndex].id); }
+    else if (key === 'd' && reviewState.focusIndex >= 0) { ev.preventDefault(); discardOne(reviewState.items[reviewState.focusIndex].id); }
+    else if (key === 'e' && reviewState.focusIndex >= 0) { ev.preventDefault(); toggleEdit(reviewState.items[reviewState.focusIndex].id); }
+    else if (key === 'x' && reviewState.focusIndex >= 0) { ev.preventDefault(); toggleSelect(reviewState.items[reviewState.focusIndex].id); }
+  });
+
+  function focusNext(delta) {
+    if (!reviewState.items.length) return;
+    let next = reviewState.focusIndex + delta;
+    if (next < 0) next = 0;
+    if (next >= reviewState.items.length) next = reviewState.items.length - 1;
+    if (next === reviewState.focusIndex) return;
+    reviewState.focusIndex = next;
+    document.querySelectorAll('.review-card.focused').forEach(c => c.classList.remove('focused'));
+    const card = document.querySelector(`.review-card[data-idx="${next}"]`);
+    if (card) {
+      card.classList.add('focused');
+      card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  // ============= IMPORT CSV =============
+  function abrirModalImportarCsv() {
+    document.getElementById('modal-title').textContent = 'Importar leads via CSV';
+    document.getElementById('modal-body').innerHTML = `
+      <p style="margin-bottom: 12px; color: var(--ink-soft); font-size: 13px; line-height: 1.5;">
+        Suba um arquivo .csv com o formato padrão (TikTok / Instagram).
+        Vou mostrar o que é válido e o que será descartado antes de confirmar.
+      </p>
+      <input type="file" id="csv-file-input" accept=".csv" style="margin-bottom: 12px; font-size: 13px;">
+      <div>
+        <button type="button" class="btn-novo" onclick="previewCsv()">Pré-visualizar</button>
+      </div>
+      <div id="csv-preview-result" style="margin-top: 16px;"></div>
+    `;
+    document.getElementById('modal-overlay').classList.add('show');
+  }
+
+  function motivoLabel(m) {
+    const map = {
+      'username_vazio': 'Sem username',
+      'temperatura_fria': 'Temperatura fria',
+      'apostador_ativo': 'Apostador ativo (não comprador)',
+      'texto_ingles': 'Texto em inglês',
+      'duplicado_db': 'Já existe no banco',
+      'duplicado_no_csv': 'Repetido no próprio CSV',
+    };
+    return map[m] || m;
+  }
+
+  async function previewCsv() {
+    const fileInput = document.getElementById('csv-file-input');
+    if (!fileInput.files.length) {
+      toast('Selecione um arquivo .csv', 'error');
+      return;
+    }
+    const out = document.getElementById('csv-preview-result');
+    out.innerHTML = '<div class="loading">Analisando arquivo...</div>';
+    const fd = new FormData();
+    fd.append('csv', fileInput.files[0]);
+    fd.append('mode', 'preview');
+    try {
+      const r = await fetch('/api/leads/import-csv', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.ok) { out.innerHTML = ''; toast(j.error || 'Erro', 'error'); return; }
+      renderPreviewCsv(j);
+    } catch (e) {
+      out.innerHTML = '';
+      toast('Erro de conexão', 'error');
+    }
+  }
+
+  function renderPreviewCsv(data) {
+    const out = document.getElementById('csv-preview-result');
+    const descRows = (data.descartados_por_motivo || [])
+      .map(d => `<tr><td>${escapeHtml(motivoLabel(d.motivo))}</td><td style="text-align:right;">${d.count}</td></tr>`)
+      .join('');
+    const validList = (data.amostra_validos || [])
+      .map(v => `<li><strong>@${escapeHtml(v.username)}</strong> <em style="color:var(--ink-muted);">(${escapeHtml(v.plataforma)})</em> · score ${v.score}/10 · ${escapeHtml(v.intent || '—')} · ${escapeHtml(v.temperatura || '—')}</li>`)
+      .join('');
+    const podeImportar = data.validos > 0;
+    out.innerHTML = `
+      <div class="csv-summary">
+        <p style="margin: 0 0 8px; font-size: 13px;">
+          <strong>${data.validos}</strong> válidos ·
+          <strong>${data.total - data.validos}</strong> descartados ·
+          total <strong>${data.total}</strong>
+        </p>
+        ${descRows ? `<table><tbody>${descRows}</tbody></table>` : ''}
+      </div>
+      ${validList ? `<details><summary style="cursor:pointer; font-size:12px; color:var(--ink-soft); margin-bottom:8px;">Mostrar 10 primeiros válidos</summary><ul style="font-size:12px; padding-left:18px; line-height:1.7; color:var(--ink-soft);">${validList}</ul></details>` : ''}
+      <div class="csv-actions">
+        <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="button" class="btn-novo" id="btn-commit-csv" onclick="commitCsv()" ${podeImportar ? '' : 'disabled'}>
+          ${podeImportar ? `Confirmar import de ${data.validos} leads` : 'Nada para importar'}
+        </button>
+      </div>
+    `;
+  }
+
+  async function commitCsv() {
+    const fileInput = document.getElementById('csv-file-input');
+    if (!fileInput.files.length) return;
+    const btn = document.getElementById('btn-commit-csv');
+    btn.disabled = true;
+    btn.textContent = 'Importando...';
+    const fd = new FormData();
+    fd.append('csv', fileInput.files[0]);
+    fd.append('mode', 'commit');
+    try {
+      const r = await fetch('/api/leads/import-csv', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.ok) {
+        toast(j.error || 'Erro', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+        return;
+      }
+      const extra = j.duplicados_ignorados ? ` (${j.duplicados_ignorados} duplicados ignorados)` : '';
+      toast(`✓ ${j.inseridos} leads importados${extra}`);
+      document.getElementById('modal-overlay').classList.remove('show');
+      loadStats();
+      loadQueue();
+    } catch (e) {
+      toast('Erro de conexão', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Tentar novamente';
     }
   }
 

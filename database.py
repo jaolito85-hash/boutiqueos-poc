@@ -23,18 +23,20 @@ DB_PATH = Path(__file__).parent / "prospects.db"
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS prospects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL,
+    plataforma TEXT NOT NULL DEFAULT 'instagram',
+    external_id TEXT,
     source_loja TEXT,
     cidade_loja TEXT,
 
-    -- dados brutos do scraper (Apify)
+    -- dados brutos do scraper (Apify) ou do CSV importado
     raw_data TEXT,
     bio TEXT,
     seguidores INTEGER,
     seguindo INTEGER,
     eh_privado INTEGER DEFAULT 0,
 
-    -- resultado da qualificação (agente IA)
+    -- resultado da qualificação (agente IA ou score externo do CSV)
     score INTEGER,
     confianca TEXT,
     razoes TEXT,
@@ -60,11 +62,14 @@ CREATE TABLE IF NOT EXISTS prospects (
 
     -- proteção (rate limiting da Aline)
     sent_by_account TEXT,  -- qual conta IG enviou (pra futuro)
-    daily_sent_date DATE   -- data do envio pra calcular limite diário
+    daily_sent_date DATE,  -- data do envio pra calcular limite diário
+
+    UNIQUE(plataforma, username)
 );
 
 CREATE INDEX IF NOT EXISTS idx_status ON prospects(status);
 CREATE INDEX IF NOT EXISTS idx_username ON prospects(username);
+CREATE INDEX IF NOT EXISTS idx_plat_user ON prospects(plataforma, username);
 CREATE INDEX IF NOT EXISTS idx_score ON prospects(score);
 CREATE INDEX IF NOT EXISTS idx_daily_sent ON prospects(daily_sent_date);
 
@@ -135,6 +140,43 @@ CREATE TABLE IF NOT EXISTS product_media (
 CREATE INDEX IF NOT EXISTS idx_media_product ON product_media(product_id);
 CREATE INDEX IF NOT EXISTS idx_media_kind ON product_media(kind);
 -- idx_media_mode é criado em _MIGRATIONS para suportar upgrade de banco antigo
+
+-- ============================================================================
+-- COMPETITOR INTEL — snapshots de análise de concorrentes
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS competitor_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    plataforma TEXT NOT NULL DEFAULT 'instagram',
+    snapshot_date DATE NOT NULL,
+
+    -- métricas calculadas (resumo rápido sem precisar parsear raw)
+    followers INTEGER,
+    posts_total INTEGER,
+    posts_periodo INTEGER,         -- nº de posts no período coletado
+    engagement_rate REAL,          -- %
+    freq_posts_dia REAL,
+    mix_formatos TEXT,             -- JSON {"Video": 14, "Sidecar": 14, "Image": 2}
+
+    -- payloads originais (para re-análise futura sem re-pagar Apify)
+    raw_profile TEXT,              -- JSON do Apify profile-scraper
+    raw_posts TEXT,                -- JSON array do Apify post-scraper
+
+    -- saída estruturada do LLM
+    analysis TEXT,                 -- JSON: posicionamento, gaps, oportunidades_haus, etc
+    posicionamento TEXT,           -- string curta extraída de analysis (atalho p/ queries)
+
+    -- contabilidade
+    custo_usd REAL,                -- soma estimada Apify + OpenAI
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(plataforma, username, snapshot_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_comp_username ON competitor_snapshots(username);
+CREATE INDEX IF NOT EXISTS idx_comp_date ON competitor_snapshots(snapshot_date);
+CREATE INDEX IF NOT EXISTS idx_comp_plat_user ON competitor_snapshots(plataforma, username);
 """
 
 # Migrations para bancos já existentes (idempotente — captura OperationalError quando a coluna já existe)
@@ -159,9 +201,80 @@ def _run_migrations(conn):
                 print(f"[migration warn] {sql} → {e}")
 
 
+def _migrate_prospects_schema(conn):
+    """Sprint 3: recria a tabela prospects pra ter (plataforma, username) UNIQUE.
+    SQLite não suporta DROP CONSTRAINT, então a forma segura é rename+create+copy.
+    Idempotente: sai cedo se já tem as colunas novas."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(prospects)").fetchall()}
+    if not cols:
+        return  # tabela ainda não existe — SCHEMA acima já criou no formato novo
+    if "plataforma" in cols and "external_id" in cols:
+        return  # já migrada
+
+    print("[migration] recriando tabela prospects com UNIQUE(plataforma, username)...")
+    conn.executescript("""
+        BEGIN;
+        ALTER TABLE prospects RENAME TO _prospects_old;
+        CREATE TABLE prospects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            plataforma TEXT NOT NULL DEFAULT 'instagram',
+            external_id TEXT,
+            source_loja TEXT,
+            cidade_loja TEXT,
+            raw_data TEXT,
+            bio TEXT,
+            seguidores INTEGER,
+            seguindo INTEGER,
+            eh_privado INTEGER DEFAULT 0,
+            score INTEGER,
+            confianca TEXT,
+            razoes TEXT,
+            mensagem TEXT,
+            sinais TEXT,
+            status TEXT DEFAULT 'NEW',
+            scraped_at TIMESTAMP,
+            qualified_at TIMESTAMP,
+            sent_at TIMESTAMP,
+            reply_at TIMESTAMP,
+            sent_by_account TEXT,
+            daily_sent_date DATE,
+            UNIQUE(plataforma, username)
+        );
+        INSERT INTO prospects (
+            id, username, plataforma, external_id, source_loja, cidade_loja,
+            raw_data, bio, seguidores, seguindo, eh_privado,
+            score, confianca, razoes, mensagem, sinais,
+            status, scraped_at, qualified_at, sent_at, reply_at,
+            sent_by_account, daily_sent_date
+        )
+        SELECT
+            id, username, 'instagram', NULL, source_loja, cidade_loja,
+            raw_data, bio, seguidores, seguindo, eh_privado,
+            score, confianca, razoes, mensagem, sinais,
+            status, scraped_at, qualified_at, sent_at, reply_at,
+            sent_by_account, daily_sent_date
+        FROM _prospects_old;
+        DROP TABLE _prospects_old;
+        CREATE INDEX IF NOT EXISTS idx_status ON prospects(status);
+        CREATE INDEX IF NOT EXISTS idx_username ON prospects(username);
+        CREATE INDEX IF NOT EXISTS idx_plat_user ON prospects(plataforma, username);
+        CREATE INDEX IF NOT EXISTS idx_score ON prospects(score);
+        CREATE INDEX IF NOT EXISTS idx_daily_sent ON prospects(daily_sent_date);
+        COMMIT;
+    """)
+
+
 def init_db():
-    """Cria o banco e tabelas se não existirem, e aplica migrações Sprint 2."""
+    """Cria o banco e tabelas se não existirem, e aplica migrações Sprint 2 + Sprint 3.
+
+    Ordem importa:
+      1. Migration de prospects roda primeiro (recria tabela antiga sem 'plataforma' se necessário).
+      2. SCHEMA cria tabelas ausentes (banco vazio) e índices que referenciam 'plataforma'.
+      3. Migrations idempotentes do Sprint 2 (ALTERs em products/product_media).
+    """
     conn = sqlite3.connect(DB_PATH)
+    _migrate_prospects_schema(conn)
     conn.executescript(SCHEMA)
     _run_migrations(conn)
     conn.commit()
@@ -180,8 +293,10 @@ def get_connection():
 # OPERAÇÕES — PROSPECTS
 # ============================================================================
 
-def save_prospect_raw(username: str, source_loja: str, cidade_loja: str, raw_data: dict):
-    """Salva um perfil scrapeado, status NEW. Idempotente (UPDATE se já existe)."""
+def save_prospect_raw(username: str, source_loja: str, cidade_loja: str, raw_data: dict,
+                      plataforma: str = "instagram"):
+    """Salva um perfil scrapeado, status NEW. Idempotente (UPDATE se já existe).
+    Dedup composto: (plataforma, username) — IG @x e TikTok @x são leads diferentes."""
     bio = raw_data.get("biography", "")
     seguidores = raw_data.get("followersCount", 0)
     seguindo = raw_data.get("followsCount", 0)
@@ -191,24 +306,90 @@ def save_prospect_raw(username: str, source_loja: str, cidade_loja: str, raw_dat
     try:
         conn.execute("""
             INSERT INTO prospects (
-                username, source_loja, cidade_loja,
+                username, plataforma, source_loja, cidade_loja,
                 raw_data, bio, seguidores, seguindo, eh_privado,
                 status, scraped_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?)
-            ON CONFLICT(username) DO UPDATE SET
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?)
+            ON CONFLICT(plataforma, username) DO UPDATE SET
                 raw_data=excluded.raw_data,
                 bio=excluded.bio,
                 seguidores=excluded.seguidores,
                 seguindo=excluded.seguindo,
                 scraped_at=excluded.scraped_at
         """, (
-            username, source_loja, cidade_loja,
+            username, plataforma, source_loja, cidade_loja,
             json.dumps(raw_data, ensure_ascii=False),
             bio, seguidores, seguindo, eh_privado,
             datetime.now().isoformat()
         ))
-        log_event(conn, username, "SCRAPED", {"source": source_loja})
+        log_event(conn, username, "SCRAPED", {"source": source_loja, "plataforma": plataforma})
         conn.commit()
+    finally:
+        conn.close()
+
+
+def prospect_exists(plataforma: str, username: str) -> bool:
+    """True se já existe prospect com (plataforma, username) no banco."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM prospects WHERE plataforma=? AND username=? LIMIT 1",
+            (plataforma, username)
+        ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def save_imported_prospect(
+    plataforma: str,
+    username: str,
+    *,
+    external_id: str | None = None,
+    source_loja: str = "csv_import",
+    cidade_loja: str | None = None,
+    score: int | None = None,
+    confianca: str = "media",
+    razoes: list | None = None,
+    mensagem: str | None = None,
+    sinais: list | None = None,
+    raw_data: dict | None = None,
+    status: str = "REVIEW",
+) -> str:
+    """Insere um lead vindo do CSV. Retorna 'inserido' | 'duplicado'.
+
+    Diferente de save_prospect_raw, este usa ON CONFLICT DO NOTHING:
+    não sobrescreve leads existentes (importação não pode atropelar dados do Apify).
+    """
+    now = datetime.now().isoformat()
+    conn = get_connection()
+    try:
+        cur = conn.execute("""
+            INSERT INTO prospects (
+                username, plataforma, external_id, source_loja, cidade_loja,
+                raw_data, score, confianca, razoes, mensagem, sinais,
+                status, scraped_at, qualified_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(plataforma, username) DO NOTHING
+        """, (
+            username, plataforma, external_id, source_loja, cidade_loja,
+            json.dumps(raw_data or {}, ensure_ascii=False),
+            score, confianca,
+            json.dumps(razoes or [], ensure_ascii=False),
+            mensagem,
+            json.dumps(sinais or [], ensure_ascii=False),
+            status, now, now,
+        ))
+        inserted = cur.rowcount > 0
+        if inserted:
+            log_event(conn, username, "IMPORTED_CSV", {
+                "plataforma": plataforma,
+                "external_id": external_id,
+                "score": score,
+                "status": status,
+            })
+        conn.commit()
+        return "inserido" if inserted else "duplicado"
     finally:
         conn.close()
 
@@ -260,6 +441,163 @@ def save_qualification(username: str, result: dict):
             "status": novo_status
         })
         conn.commit()
+    finally:
+        conn.close()
+
+
+def list_review_prospects(
+    *,
+    plataforma: str | None = None,
+    temperatura: str | None = None,
+    intent: str | None = None,
+    busca: str | None = None,
+    sort: str = "score_desc",
+    page: int = 1,
+    page_size: int = 30,
+) -> dict:
+    """Lista paginada de leads em REVIEW com filtros e ordenação.
+
+    Args:
+        plataforma: 'instagram' | 'tiktok' | None (todos)
+        temperatura: 'quente' | 'morno' | None — usa sinais (temp_quente, temp_morno)
+        intent: 'perguntando_preco' | 'buscando_atendimento' | 'perguntando_local' | None
+        busca: substring case-insensitive em username/source_loja
+        sort: 'score_desc' | 'score_asc' | 'recent' | 'oldest'
+        page: 1-indexed
+        page_size: máx 100
+
+    Returns:
+        {"items": [...], "total": int, "page": int, "page_size": int, "pages": int}
+    """
+    where = ["status = 'REVIEW'"]
+    params: list = []
+
+    if plataforma in ("instagram", "tiktok"):
+        where.append("plataforma = ?")
+        params.append(plataforma)
+    if temperatura in ("quente", "morno", "frio"):
+        where.append("sinais LIKE ?")
+        params.append(f"%temp_{temperatura}%")
+    if intent in ("perguntando_preco", "buscando_atendimento", "perguntando_local"):
+        where.append("sinais LIKE ?")
+        params.append(f"%intent_{intent}%")
+    if busca:
+        like = f"%{busca.lower()}%"
+        where.append("(LOWER(username) LIKE ? OR LOWER(IFNULL(source_loja,'')) LIKE ?)")
+        params.extend([like, like])
+
+    order_map = {
+        "score_desc": "score DESC, qualified_at DESC",
+        "score_asc": "score ASC, qualified_at DESC",
+        "recent": "qualified_at DESC",
+        "oldest": "qualified_at ASC",
+    }
+    order_by = order_map.get(sort, order_map["score_desc"])
+
+    page = max(1, int(page))
+    page_size = max(1, min(100, int(page_size)))
+    offset = (page - 1) * page_size
+
+    where_sql = " AND ".join(where)
+    conn = get_connection()
+    try:
+        total = conn.execute(
+            f"SELECT COUNT(*) FROM prospects WHERE {where_sql}", params
+        ).fetchone()[0]
+        rows = conn.execute(
+            f"SELECT * FROM prospects WHERE {where_sql} "
+            f"ORDER BY {order_by} LIMIT ? OFFSET ?",
+            (*params, page_size, offset)
+        ).fetchall()
+        items = [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+    pages = (total + page_size - 1) // page_size if total else 0
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": pages,
+    }
+
+
+def get_prospect_by_id(prospect_id: int) -> dict | None:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM prospects WHERE id=?", (prospect_id,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def set_prospect_status(prospect_id: int, novo_status: str, *, event_type: str | None = None) -> dict | None:
+    """Muda status do prospect. Retorna o prospect atualizado ou None se não existe."""
+    valid = {"NEW", "QUALIFIED", "READY", "REVIEW", "DISCARDED", "SENT", "REPLIED", "ENTERED_GROUP"}
+    if novo_status not in valid:
+        raise ValueError(f"status inválido: {novo_status}")
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE prospects SET status=? WHERE id=?",
+            (novo_status, prospect_id)
+        )
+        if cur.rowcount == 0:
+            return None
+        row = conn.execute("SELECT username FROM prospects WHERE id=?", (prospect_id,)).fetchone()
+        if row and event_type:
+            log_event(conn, row["username"], event_type, {"new_status": novo_status})
+        conn.commit()
+    finally:
+        conn.close()
+    return get_prospect_by_id(prospect_id)
+
+
+def bulk_set_status(prospect_ids: list[int], novo_status: str, *, event_type: str | None = None) -> int:
+    """Aplica novo status a uma lista de IDs. Retorna quantos foram atualizados."""
+    if not prospect_ids:
+        return 0
+    valid = {"NEW", "QUALIFIED", "READY", "REVIEW", "DISCARDED", "SENT", "REPLIED", "ENTERED_GROUP"}
+    if novo_status not in valid:
+        raise ValueError(f"status inválido: {novo_status}")
+    placeholders = ",".join("?" * len(prospect_ids))
+    conn = get_connection()
+    try:
+        # log antes do update pra preservar usernames
+        if event_type:
+            rows = conn.execute(
+                f"SELECT username FROM prospects WHERE id IN ({placeholders})",
+                prospect_ids
+            ).fetchall()
+            for r in rows:
+                log_event(conn, r["username"], event_type, {"new_status": novo_status, "bulk": True})
+        cur = conn.execute(
+            f"UPDATE prospects SET status=? WHERE id IN ({placeholders})",
+            (novo_status, *prospect_ids)
+        )
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
+
+
+def update_prospect_message(prospect_id: int, mensagem: str) -> bool:
+    """Atualiza apenas o campo mensagem de um prospect. Retorna True se afetou linha."""
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE prospects SET mensagem=? WHERE id=?",
+            (mensagem, prospect_id)
+        )
+        if cur.rowcount:
+            row = conn.execute("SELECT username FROM prospects WHERE id=?", (prospect_id,)).fetchone()
+            if row:
+                log_event(conn, row["username"], "MESSAGE_EDITED", {"length": len(mensagem or "")})
+            conn.commit()
+        return cur.rowcount > 0
     finally:
         conn.close()
 
@@ -540,6 +878,161 @@ def delete_product_media(media_id: int):
     try:
         conn.execute("DELETE FROM product_media WHERE id=?", (media_id,))
         conn.commit()
+    finally:
+        conn.close()
+
+
+# ============================================================================
+# COMPETITOR INTEL — snapshots de análise
+# ============================================================================
+
+def save_competitor_snapshot(
+    username: str,
+    snapshot_date: str,
+    *,
+    plataforma: str = "instagram",
+    followers: int | None = None,
+    posts_total: int | None = None,
+    posts_periodo: int | None = None,
+    engagement_rate: float | None = None,
+    freq_posts_dia: float | None = None,
+    mix_formatos: dict | None = None,
+    raw_profile: dict | None = None,
+    raw_posts: list | None = None,
+    analysis: dict | None = None,
+    posicionamento: str | None = None,
+    custo_usd: float | None = None,
+) -> int:
+    """Salva (ou substitui) um snapshot de análise de concorrente.
+
+    snapshot_date: 'YYYY-MM-DD'. Mesmo (plataforma, username, snapshot_date) =
+    UPSERT — re-rodar no mesmo dia atualiza o registro.
+    """
+    conn = get_connection()
+    try:
+        cur = conn.execute("""
+            INSERT INTO competitor_snapshots (
+                username, plataforma, snapshot_date,
+                followers, posts_total, posts_periodo,
+                engagement_rate, freq_posts_dia, mix_formatos,
+                raw_profile, raw_posts, analysis,
+                posicionamento, custo_usd
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(plataforma, username, snapshot_date) DO UPDATE SET
+                followers=excluded.followers,
+                posts_total=excluded.posts_total,
+                posts_periodo=excluded.posts_periodo,
+                engagement_rate=excluded.engagement_rate,
+                freq_posts_dia=excluded.freq_posts_dia,
+                mix_formatos=excluded.mix_formatos,
+                raw_profile=excluded.raw_profile,
+                raw_posts=excluded.raw_posts,
+                analysis=excluded.analysis,
+                posicionamento=excluded.posicionamento,
+                custo_usd=excluded.custo_usd
+        """, (
+            username, plataforma, snapshot_date,
+            followers, posts_total, posts_periodo,
+            engagement_rate, freq_posts_dia,
+            json.dumps(mix_formatos, ensure_ascii=False) if mix_formatos is not None else None,
+            json.dumps(raw_profile, ensure_ascii=False) if raw_profile is not None else None,
+            json.dumps(raw_posts, ensure_ascii=False) if raw_posts is not None else None,
+            json.dumps(analysis, ensure_ascii=False) if analysis is not None else None,
+            posicionamento, custo_usd,
+        ))
+        conn.commit()
+        # cur.lastrowid não funciona em UPSERT que disparou UPDATE — buscar id real
+        row = conn.execute(
+            "SELECT id FROM competitor_snapshots WHERE plataforma=? AND username=? AND snapshot_date=?",
+            (plataforma, username, snapshot_date),
+        ).fetchone()
+        return row["id"]
+    finally:
+        conn.close()
+
+
+def _hydrate_snapshot(row) -> dict:
+    """Converte uma row em dict, desserializando os campos JSON."""
+    if row is None:
+        return None
+    d = dict(row)
+    for k in ("mix_formatos", "raw_profile", "raw_posts", "analysis"):
+        if d.get(k):
+            try:
+                d[k] = json.loads(d[k])
+            except (json.JSONDecodeError, TypeError):
+                pass
+    return d
+
+
+def get_latest_competitor_snapshot(username: str, plataforma: str = "instagram") -> dict | None:
+    """Retorna o snapshot mais recente do handle (ou None)."""
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT * FROM competitor_snapshots
+            WHERE plataforma=? AND username=?
+            ORDER BY snapshot_date DESC, id DESC
+            LIMIT 1
+        """, (plataforma, username)).fetchone()
+        return _hydrate_snapshot(row)
+    finally:
+        conn.close()
+
+
+def get_competitor_snapshot_by_date(
+    username: str, snapshot_date: str, plataforma: str = "instagram"
+) -> dict | None:
+    """Retorna o snapshot exato da data (YYYY-MM-DD)."""
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT * FROM competitor_snapshots
+            WHERE plataforma=? AND username=? AND snapshot_date=?
+        """, (plataforma, username, snapshot_date)).fetchone()
+        return _hydrate_snapshot(row)
+    finally:
+        conn.close()
+
+
+def get_competitor_snapshot_before(
+    username: str, ref_date: str, plataforma: str = "instagram"
+) -> dict | None:
+    """Retorna o snapshot mais recente com snapshot_date < ref_date (YYYY-MM-DD).
+    Usado para o diff temporal: queremos o último antes da data atual."""
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT * FROM competitor_snapshots
+            WHERE plataforma=? AND username=? AND snapshot_date < ?
+            ORDER BY snapshot_date DESC, id DESC
+            LIMIT 1
+        """, (plataforma, username, ref_date)).fetchone()
+        return _hydrate_snapshot(row)
+    finally:
+        conn.close()
+
+
+def list_competitor_snapshots(
+    username: str | None = None, plataforma: str = "instagram", limit: int = 100
+) -> list[dict]:
+    """Lista snapshots (de um handle específico ou todos). Resumo sem raw/analysis."""
+    conn = get_connection()
+    try:
+        sql = """
+            SELECT id, username, plataforma, snapshot_date, followers, posts_total,
+                   posts_periodo, engagement_rate, freq_posts_dia, posicionamento,
+                   custo_usd, created_at
+            FROM competitor_snapshots
+        """
+        params = []
+        if username:
+            sql += " WHERE plataforma=? AND username=?"
+            params = [plataforma, username]
+        sql += " ORDER BY snapshot_date DESC, username ASC LIMIT ?"
+        params.append(limit)
+        rows = conn.execute(sql, params).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()
 

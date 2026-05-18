@@ -28,11 +28,15 @@ from database import (
     DAILY_LIMIT,
 )
 from catalogo import bp_catalogo
+from leads_import import bp_leads
+from prospects_review import bp_review
 import json
 
 app = Flask(__name__, static_folder="painel", static_url_path="")
 CORS(app)
 app.register_blueprint(bp_catalogo)
+app.register_blueprint(bp_leads)
+app.register_blueprint(bp_review)
 
 
 # ============================================================================

@@ -36,6 +36,14 @@ logs/
 # Database local
 *.sqlite
 *.db
+*.db.bak
+*.bak
 
 # Mídia local (fotos reais de produtos/clientes, vídeos gerados, pacotes)
 media/
+
+# Cache do competitor_intel (JSONs brutos da Apify, TTL configurável)
+competitor_cache/
+
+# Saídas brutas de scrapers ad-hoc (Apify ultimate scraper, etc)
+outputs/
