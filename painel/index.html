@@ -1311,6 +1311,564 @@
     margin-right: 6px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============= CONCORRENTES ============= */
+  .conc-wrap { max-width: 920px; margin: 0 auto; }
+
+  .conc-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 4px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .conc-toolbar h2 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--ink);
+  }
+  .conc-toolbar .toolbar-sub {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+
+  .conc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .conc-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .conc-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent 80%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .conc-card:hover {
+    border-color: var(--sage);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(31, 36, 38, 0.06);
+  }
+  .conc-card:hover::before { opacity: 1; }
+  .conc-card h3 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--ink);
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+  .conc-card h3 .at { color: var(--gold); margin-right: 1px; }
+  .conc-card .conc-posic {
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 38px;
+  }
+  .conc-card .conc-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .conc-card .conc-metric { text-align: center; }
+  .conc-card .conc-metric-num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .conc-card .conc-metric-lbl {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+  .conc-card .conc-foot {
+    margin-top: 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    text-align: right;
+  }
+
+  .conc-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* Indicador de uso diário */
+  .uso-hoje {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .uso-hoje .uso-num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+    letter-spacing: 0;
+  }
+  .uso-hoje.full .uso-num { color: var(--danger); }
+
+  /* Empty state especial pra concorrentes */
+  .conc-empty {
+    text-align: center;
+    padding: 64px 24px;
+    background: var(--bg-card);
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+  }
+  .conc-empty h3 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 26px;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .conc-empty p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    max-width: 440px;
+    margin: 0 auto 22px;
+  }
+  .conc-empty .btn-novo {
+    margin-top: 4px;
+  }
+
+  /* ============= MODAL ANALISAR ============= */
+  .conc-form-hint {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: -4px 0 12px;
+    line-height: 1.5;
+  }
+  .handle-preview {
+    margin: 6px 0 14px;
+    font-size: 13px;
+    color: var(--sage-deep);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    min-height: 18px;
+  }
+  .handle-preview.invalid { color: var(--danger); font-style: normal; font-family: 'Outfit'; }
+  .btn-block { width: 100%; margin-top: 8px; }
+
+  .analise-running {
+    text-align: center;
+    padding: 36px 16px;
+  }
+  .analise-running .ring {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    border-top-color: var(--sage-deep);
+    margin: 0 auto 18px;
+    animation: spin 1.1s linear infinite;
+  }
+  .analise-running h3 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 22px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .analise-running p {
+    color: var(--ink-soft);
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 340px;
+    margin: 0 auto;
+  }
+  .analise-steps {
+    list-style: none;
+    margin: 18px auto 0;
+    max-width: 280px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .analise-steps li {
+    padding: 4px 0 4px 22px;
+    position: relative;
+    transition: color 0.3s;
+  }
+  .analise-steps li::before {
+    content: '○';
+    position: absolute;
+    left: 4px;
+    color: var(--ink-muted);
+  }
+  .analise-steps li.active { color: var(--sage-deep); }
+  .analise-steps li.active::before { content: '◉'; color: var(--gold); }
+  .analise-steps li.done { color: var(--ink-soft); }
+  .analise-steps li.done::before { content: '●'; color: var(--success); }
+
+  /* ============= DETALHE DO CONCORRENTE ============= */
+  .det-hero {
+    padding: 22px 28px 18px;
+    margin: -24px -28px 24px;
+    background: linear-gradient(180deg, #faf6ec, var(--bg-card));
+    border-bottom: 1px solid var(--line);
+  }
+  .det-hero h2 {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 30px;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .det-hero h2 .at { color: var(--gold); }
+  .det-hero .det-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--sage-deep);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+  }
+  .det-hero .det-link:hover { color: var(--sage); }
+  .det-hero .det-posic {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    border-left: 2px solid var(--gold);
+    padding-left: 12px;
+  }
+
+  .det-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 540px) { .det-stats { grid-template-columns: repeat(2, 1fr); } }
+  .det-stat {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .det-stat-num {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 24px;
+    color: var(--ink);
+    line-height: 1.05;
+  }
+  .det-stat-lbl {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 6px;
+  }
+
+  .det-section {
+    margin-bottom: 24px;
+  }
+  .det-section h3 {
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .det-section h3 .accent {
+    color: var(--gold);
+    margin-right: 6px;
+  }
+  .det-resumo {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--ink);
+    padding: 16px 18px;
+    background: #fbf9f3;
+    border-radius: 8px;
+    border-left: 3px solid var(--gold);
+  }
+
+  .padroes-list {
+    list-style: none;
+    counter-reset: padrao;
+  }
+  .padroes-list li {
+    counter-increment: padrao;
+    padding: 12px 0 12px 36px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .padroes-list li:last-child { border-bottom: none; }
+  .padroes-list li::before {
+    content: counter(padrao, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 12px;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--gold);
+  }
+  .padroes-list .padrao-titulo {
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-weight: 400;
+  }
+  .padroes-list .padrao-ev {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .gaps-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 540px) { .gaps-grid { grid-template-columns: 1fr; } }
+  .gap-box {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+  }
+  .gap-box .gap-lbl {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+  }
+  .gap-box .gap-content {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .gap-box.outros { grid-column: span 2; }
+  @media (max-width: 540px) { .gap-box.outros { grid-column: span 1; } }
+  .gap-box.outros ul {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+  }
+  .gap-box.outros li {
+    font-size: 13px;
+    color: var(--ink-soft);
+    padding: 3px 0 3px 14px;
+    position: relative;
+  }
+  .gap-box.outros li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+    font-weight: bold;
+  }
+
+  .op-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .op-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px 14px;
+    align-items: start;
+  }
+  .op-card .op-acao {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.45;
+    font-weight: 400;
+  }
+  .op-card .op-racional {
+    grid-column: span 2;
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-style: italic;
+    line-height: 1.55;
+    padding-top: 6px;
+    border-top: 1px dashed var(--line);
+  }
+  .op-chips {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .chip {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .chip.imit-copiar { background: #e8f0e8; color: #3d6047; }
+  .chip.imit-adaptar { background: #f5ecd6; color: #7a6431; }
+  .chip.imit-evitar { background: #fdf6f3; color: #a25a3e; border: 1px solid #f1c8b8; }
+  .chip.esf-baixo { background: var(--bg); color: var(--ink-soft); }
+  .chip.esf-medio { background: #ebe7da; color: var(--ink-soft); }
+  .chip.esf-alto { background: #e3ddc8; color: var(--ink); }
+
+  .parc-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  @media (max-width: 540px) { .parc-list { grid-template-columns: 1fr; } }
+  .parc-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .parc-item .parc-handle {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .parc-item .parc-handle:hover { color: var(--sage-deep); }
+  .parc-item .parc-handle .at { color: var(--gold); }
+  .parc-item .parc-tipo {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+  }
+  .parc-item .parc-por {
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+
+  .alertas-list {
+    list-style: none;
+    background: #fdf9ed;
+    border: 1px solid #ecdcb1;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .alertas-list li {
+    font-size: 13px;
+    color: #5a4818;
+    padding: 4px 0 4px 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .alertas-list li::before {
+    content: '⚠';
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+  }
+
+  .det-footer {
+    margin: 28px -28px -24px;
+    padding: 16px 28px;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .det-footer .det-meta { line-height: 1.6; }
+  .det-footer .det-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-reanalisar {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-reanalisar:hover { border-color: var(--sage); color: var(--ink); }
+  .btn-remover {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid #f0d5cc;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-remover:hover { background: #fdf2ee; }
 </style>
 </head>
 <body>
@@ -1324,6 +1882,7 @@
   <button class="tab active" data-tab="outbound" onclick="setTab('outbound')">Outbound</button>
   <button class="tab" data-tab="review" onclick="setTab('review')">Revisar <span class="tab-badge" id="tab-badge-review" hidden>0</span></button>
   <button class="tab" data-tab="catalogo" onclick="setTab('catalogo')">Catálogo</button>
+  <button class="tab" data-tab="concorrentes" onclick="setTab('concorrentes')">Concorrentes</button>
 </nav>
 
 <!-- ============= VIEW: OUTBOUND ============= -->
@@ -1420,9 +1979,28 @@
   <div class="catalogo-wrap">
     <div class="catalogo-toolbar">
       <h2>Produtos</h2>
-      <button class="btn-novo" onclick="abrirModalNovoProduto()">+ Novo produto</button>
+      <button type="button" class="btn-novo" onclick="abrirModalNovoProduto()">+ Novo produto</button>
     </div>
     <div id="produto-grid">
+      <div class="loading">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============= VIEW: CONCORRENTES ============= -->
+<div id="view-concorrentes" hidden>
+  <div class="conc-wrap">
+    <div class="conc-toolbar">
+      <div>
+        <h2>Concorrentes</h2>
+        <div class="toolbar-sub">Inteligência competitiva</div>
+      </div>
+      <div class="conc-toolbar-right">
+        <span class="uso-hoje" id="conc-uso-hoje" hidden></span>
+        <button type="button" class="btn-novo" onclick="abrirModalAnalisarConc()">+ Analisar concorrente</button>
+      </div>
+    </div>
+    <div id="conc-grid">
       <div class="loading">Carregando...</div>
     </div>
   </div>
@@ -1659,8 +2237,10 @@
     document.getElementById('view-outbound').hidden = tab !== 'outbound';
     document.getElementById('view-review').hidden = tab !== 'review';
     document.getElementById('view-catalogo').hidden = tab !== 'catalogo';
+    document.getElementById('view-concorrentes').hidden = tab !== 'concorrentes';
     if (tab === 'catalogo') loadCatalogo();
     if (tab === 'review') loadReview({ resetPage: true });
+    if (tab === 'concorrentes') loadConcorrentes();
   }
 
   // ============= CATÁLOGO =============
@@ -2866,6 +3446,413 @@
     const num = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
     if (!isFinite(num)) return '—';
     return FMT_BRL.format(num);
+  }
+
+  // ============= CONCORRENTES =============
+  const FMT_INT = new Intl.NumberFormat('pt-BR');
+
+  function fmtInt(n) {
+    if (n === null || n === undefined || n === '' || isNaN(n)) return '—';
+    return FMT_INT.format(Math.round(Number(n)));
+  }
+
+  function fmtEng(v) {
+    if (v === null || v === undefined || v === '') return '—';
+    const num = Number(v);
+    if (!isFinite(num)) return '—';
+    return num.toFixed(2) + '%';
+  }
+
+  function fmtFreq(v) {
+    if (v === null || v === undefined || v === '') return '—';
+    const num = Number(v);
+    if (!isFinite(num)) return '—';
+    if (num < 0.5) {
+      const dias = num > 0 ? Math.round(1 / num) : 0;
+      return dias ? `1/${dias}d` : '—';
+    }
+    return num.toFixed(1) + '/d';
+  }
+
+  function fmtDataCurta(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }
+
+  // Extrai handle de URL ou texto (espelho do regex no backend, só pra preview)
+  function extractHandlePreview(raw) {
+    if (!raw) return null;
+    let s = raw.trim();
+    s = s.replace(/^https?:\/\//i, '');
+    s = s.replace(/^(www\.)?instagram\.com\//i, '');
+    s = s.replace(/^@/, '').replace(/^\/+|\/+$/g, '');
+    s = s.split('/')[0].split('?')[0].split('#')[0].toLowerCase();
+    if (!s || !/^[a-z0-9_.]{1,30}$/.test(s)) return null;
+    return s;
+  }
+
+  async function loadConcorrentes() {
+    const grid = document.getElementById('conc-grid');
+    grid.innerHTML = '<div class="loading">Carregando...</div>';
+    loadUsoHoje();
+    try {
+      const r = await fetch('/api/concorrentes');
+      const lista = await r.json();
+      renderListaConcorrentes(lista);
+    } catch (e) {
+      grid.innerHTML = '<div class="conc-empty"><p>Não consegui carregar a lista agora.</p></div>';
+    }
+  }
+
+  async function loadUsoHoje() {
+    const el = document.getElementById('conc-uso-hoje');
+    if (!el) return;
+    try {
+      const r = await fetch('/api/concorrentes/uso-hoje');
+      const j = await r.json();
+      el.hidden = false;
+      el.classList.toggle('full', !j.can_run);
+      if (j.can_run) {
+        el.innerHTML = `<span class="uso-num">${j.used}</span> / ${j.limit} análises hoje`;
+      } else {
+        el.innerHTML = `Limite diário atingido <span class="uso-num">${j.used}/${j.limit}</span>`;
+      }
+    } catch (e) {
+      el.hidden = true;
+    }
+  }
+
+  function renderListaConcorrentes(lista) {
+    const grid = document.getElementById('conc-grid');
+    grid.className = '';
+    if (!lista || !lista.length) {
+      grid.innerHTML = `
+        <div class="conc-empty">
+          <h3>Conheça o terreno antes de plantar</h3>
+          <p>Cole o link de um perfil concorrente no Instagram e a Haus recebe um raio-X estratégico: posicionamento, padrões de top posts, gaps que valem explorar e parcerias potenciais.</p>
+          <button type="button" class="btn-novo" onclick="abrirModalAnalisarConc()">+ Analisar primeiro concorrente</button>
+        </div>`;
+      return;
+    }
+    grid.className = 'conc-grid';
+    grid.innerHTML = lista.map(c => `
+      <div class="conc-card" onclick="abrirDetalheConc('${escapeHtml(c.username)}')">
+        <h3><span class="at">@</span>${escapeHtml(c.username)}</h3>
+        <div class="conc-posic">${escapeHtml(c.posicionamento || 'Sem posicionamento analisado.')}</div>
+        <div class="conc-metrics">
+          <div class="conc-metric">
+            <div class="conc-metric-num">${fmtInt(c.followers)}</div>
+            <div class="conc-metric-lbl">Seguidores</div>
+          </div>
+          <div class="conc-metric">
+            <div class="conc-metric-num">${fmtEng(c.engagement_rate)}</div>
+            <div class="conc-metric-lbl">Engaj.</div>
+          </div>
+          <div class="conc-metric">
+            <div class="conc-metric-num">${fmtFreq(c.freq_posts_dia)}</div>
+            <div class="conc-metric-lbl">Posts</div>
+          </div>
+        </div>
+        <div class="conc-foot">Analisado em ${fmtDataCurta(c.snapshot_date)}</div>
+      </div>
+    `).join('');
+  }
+
+  // ====== MODAL: ANALISAR CONCORRENTE ======
+  function abrirModalAnalisarConc() {
+    document.getElementById('modal-title').textContent = 'Analisar concorrente';
+    document.getElementById('modal-body').innerHTML = `
+      <form id="form-conc" onsubmit="submeterAnalise(event)">
+        <div class="form-row">
+          <label>Link do Instagram ou @username</label>
+          <input type="text" id="conc-input" autocomplete="off" autocapitalize="off"
+                 placeholder="cole o link do perfil aqui"
+                 oninput="atualizarPreviewHandle(this.value)" required>
+        </div>
+        <div class="handle-preview" id="conc-preview">&nbsp;</div>
+        <p class="conc-form-hint">
+          Em alguns instantes você recebe um relatório estratégico com posicionamento,
+          padrões do que funciona pra esse perfil e oportunidades pra Haus.
+        </p>
+
+        <button type="submit" id="btn-analisar" class="btn-novo btn-block" disabled>
+          Gerar análise
+        </button>
+      </form>
+    `;
+    document.getElementById('modal-overlay').classList.add('show');
+    setTimeout(() => document.getElementById('conc-input')?.focus(), 50);
+  }
+
+  function atualizarPreviewHandle(raw) {
+    const prev = document.getElementById('conc-preview');
+    const btn = document.getElementById('btn-analisar');
+    if (!raw || !raw.trim()) {
+      prev.innerHTML = '&nbsp;';
+      prev.className = 'handle-preview';
+      btn.disabled = true;
+      return;
+    }
+    const handle = extractHandlePreview(raw);
+    if (handle) {
+      prev.textContent = `→ @${handle}`;
+      prev.className = 'handle-preview';
+      btn.disabled = false;
+    } else {
+      prev.textContent = '✗ Não consegui extrair um @username válido';
+      prev.className = 'handle-preview invalid';
+      btn.disabled = true;
+    }
+  }
+
+  async function submeterAnalise(ev) {
+    ev.preventDefault();
+    const input = document.getElementById('conc-input').value;
+    const handle = extractHandlePreview(input);
+    if (!handle) { toast('Link inválido', 'error'); return; }
+
+    document.getElementById('modal-title').textContent = `Analisando @${handle}`;
+    renderAnaliseRunning(handle);
+
+    try {
+      const r = await fetch('/api/concorrentes/analisar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url_ou_handle: handle }),
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        toast(j.error || 'Não foi possível concluir', 'error');
+        abrirModalAnalisarConc();
+        setTimeout(() => {
+          const el = document.getElementById('conc-input');
+          if (el) { el.value = input; atualizarPreviewHandle(input); }
+        }, 80);
+        return;
+      }
+      toast('✓ Análise pronta');
+      loadUsoHoje();
+      loadConcorrentes();
+      renderDetalheConc(j.snapshot);
+    } catch (e) {
+      toast('Sem conexão', 'error');
+      abrirModalAnalisarConc();
+    }
+  }
+
+  function renderAnaliseRunning(handle) {
+    document.getElementById('modal-body').innerHTML = `
+      <div class="analise-running">
+        <div class="ring"></div>
+        <h3>Analisando @${escapeHtml(handle)}</h3>
+        <p>Estou lendo o perfil, comparando padrões dos posts e montando o relatório estratégico. Não feche esta janela.</p>
+        <ul class="analise-steps">
+          <li class="active" id="step-coleta">Olhando o perfil e os últimos posts</li>
+          <li id="step-metricas">Identificando padrões e métricas</li>
+          <li id="step-analise">Montando o relatório estratégico</li>
+          <li id="step-salvar">Quase lá</li>
+        </ul>
+      </div>
+    `;
+    setTimeout(() => marcarStep('step-coleta', 'step-metricas'), 7000);
+    setTimeout(() => marcarStep('step-metricas', 'step-analise'), 14000);
+    setTimeout(() => marcarStep('step-analise', 'step-salvar'), 35000);
+  }
+
+  function marcarStep(doneId, nextId) {
+    const done = document.getElementById(doneId);
+    const next = document.getElementById(nextId);
+    if (done) { done.classList.remove('active'); done.classList.add('done'); }
+    if (next) next.classList.add('active');
+  }
+
+  // ====== DETALHE ======
+  async function abrirDetalheConc(handle) {
+    document.getElementById('modal-title').textContent = `@${handle}`;
+    document.getElementById('modal-body').innerHTML = '<div class="loading">Carregando análise...</div>';
+    document.getElementById('modal-overlay').classList.add('show');
+    try {
+      const r = await fetch(`/api/concorrentes/${encodeURIComponent(handle)}`);
+      const snap = await r.json();
+      if (!r.ok || snap.ok === false) {
+        toast(snap.error || 'Não encontrado', 'error');
+        fecharModal();
+        return;
+      }
+      renderDetalheConc(snap);
+    } catch (e) {
+      toast('Erro ao carregar', 'error');
+      fecharModal();
+    }
+  }
+
+  function renderDetalheConc(snap) {
+    if (!snap) return;
+    const a = snap.analysis || {};
+    const handle = snap.username;
+    document.getElementById('modal-title').textContent = `@${handle}`;
+
+    const padroesHtml = (a.padroes_top_posts || []).map(p => `
+      <li>
+        <div class="padrao-titulo">${escapeHtml(p.padrao || '')}</div>
+        <div class="padrao-ev">${escapeHtml(p.evidencia || '')}</div>
+      </li>
+    `).join('') || '<li class="padrao-titulo" style="color: var(--ink-muted); font-style: italic;">Sem padrões identificados.</li>';
+
+    const gaps = a.gaps || {};
+    const outrosHtml = (gaps.outros || []).map(o => `<li>${escapeHtml(o)}</li>`).join('');
+
+    const opsHtml = (a.oportunidades_haus || []).map(op => `
+      <li class="op-card">
+        <div class="op-acao">${escapeHtml(op.acao || '')}</div>
+        <div class="op-chips">
+          <span class="chip imit-${escapeHtml(op.imitabilidade || 'adaptar')}">${escapeHtml(op.imitabilidade || '—')}</span>
+          <span class="chip esf-${escapeHtml(op.esforco || 'medio')}">esforço ${escapeHtml(op.esforco || '—')}</span>
+        </div>
+        ${op.racional ? `<div class="op-racional">${escapeHtml(op.racional)}</div>` : ''}
+      </li>
+    `).join('') || '<li class="op-card"><div class="op-acao" style="color: var(--ink-muted); font-style: italic;">Sem oportunidades sugeridas.</div></li>';
+
+    const parcHtml = (a.parcerias_potenciais || []).map(p => `
+      <div class="parc-item">
+        <a class="parc-handle" href="https://instagram.com/${encodeURIComponent(p.handle)}" target="_blank" rel="noopener">
+          <span class="at">@</span>${escapeHtml(p.handle || '')}
+        </a>
+        <div class="parc-tipo">${escapeHtml((p.tipo || '').replace(/_/g, ' '))}</div>
+        <div class="parc-por">${escapeHtml(p.porque || '')}</div>
+      </div>
+    `).join('') || '<p style="color: var(--ink-muted); font-size: 13px; font-style: italic; grid-column: span 2;">Sem parcerias mapeadas.</p>';
+
+    const alertasHtml = (a.alertas || []).map(al => `<li>${escapeHtml(al)}</li>`).join('');
+
+    document.getElementById('modal-body').innerHTML = `
+      <div class="det-hero">
+        <h2><span class="at">@</span>${escapeHtml(handle)}</h2>
+        <a class="det-link" href="https://instagram.com/${encodeURIComponent(handle)}" target="_blank" rel="noopener">
+          abrir no Instagram ↗
+        </a>
+        ${a.posicionamento ? `<div class="det-posic">${escapeHtml(a.posicionamento)}</div>` : ''}
+      </div>
+
+      <div class="det-stats">
+        <div class="det-stat">
+          <div class="det-stat-num">${fmtInt(snap.followers)}</div>
+          <div class="det-stat-lbl">Seguidores</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-stat-num">${fmtInt(snap.posts_total)}</div>
+          <div class="det-stat-lbl">Posts totais</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-stat-num">${fmtEng(snap.engagement_rate)}</div>
+          <div class="det-stat-lbl">Engajamento</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-stat-num">${fmtFreq(snap.freq_posts_dia)}</div>
+          <div class="det-stat-lbl">Frequência</div>
+        </div>
+      </div>
+
+      ${a.resumo_executivo ? `
+      <div class="det-section">
+        <h3><span class="accent">◆</span> Resumo executivo</h3>
+        <div class="det-resumo">${escapeHtml(a.resumo_executivo)}</div>
+      </div>` : ''}
+
+      <div class="det-section">
+        <h3><span class="accent">◆</span> Padrões dos top posts</h3>
+        <ol class="padroes-list">${padroesHtml}</ol>
+      </div>
+
+      <div class="det-section">
+        <h3><span class="accent">◆</span> Gaps observados</h3>
+        <div class="gaps-grid">
+          <div class="gap-box">
+            <div class="gap-lbl">Hashtags</div>
+            <div class="gap-content">${escapeHtml(gaps.hashtags || '—')}</div>
+          </div>
+          <div class="gap-box">
+            <div class="gap-lbl">Frequência</div>
+            <div class="gap-content">${escapeHtml(gaps.frequencia || '—')}</div>
+          </div>
+          ${(gaps.outros && gaps.outros.length) ? `
+          <div class="gap-box outros">
+            <div class="gap-lbl">Formatos</div>
+            <div class="gap-content">${escapeHtml(gaps.formatos || '—')}</div>
+            <ul style="margin-top: 8px;">${outrosHtml}</ul>
+          </div>
+          ` : `
+          <div class="gap-box outros">
+            <div class="gap-lbl">Formatos</div>
+            <div class="gap-content">${escapeHtml(gaps.formatos || '—')}</div>
+          </div>
+          `}
+        </div>
+      </div>
+
+      <div class="det-section">
+        <h3><span class="accent">◆</span> Oportunidades para a Haus</h3>
+        <ul class="op-list">${opsHtml}</ul>
+      </div>
+
+      <div class="det-section">
+        <h3><span class="accent">◆</span> Parcerias potenciais</h3>
+        <div class="parc-list">${parcHtml}</div>
+      </div>
+
+      ${alertasHtml ? `
+      <div class="det-section">
+        <h3><span class="accent">◆</span> Alertas</h3>
+        <ul class="alertas-list">${alertasHtml}</ul>
+      </div>` : ''}
+
+      <div class="det-footer">
+        <div class="det-meta">
+          Análise de ${fmtDataCurta(snap.snapshot_date)}
+        </div>
+        <div class="det-actions">
+          <button type="button" class="btn-reanalisar" onclick="reAnalisarConc('${escapeHtml(handle)}')">↻ Atualizar análise</button>
+          <button type="button" class="btn-remover" onclick="removerConc('${escapeHtml(handle)}')">Remover</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async function reAnalisarConc(handle) {
+    if (!confirm(`Atualizar a análise de @${handle}? Conta como uma nova análise no seu uso de hoje.`)) return;
+    document.getElementById('modal-title').textContent = `Atualizando @${handle}`;
+    renderAnaliseRunning(handle);
+    try {
+      const r = await fetch('/api/concorrentes/analisar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url_ou_handle: handle, refresh: true }),
+      });
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Não foi possível atualizar', 'error'); return; }
+      toast('✓ Atualizado');
+      loadUsoHoje();
+      loadConcorrentes();
+      renderDetalheConc(j.snapshot);
+    } catch (e) {
+      toast('Sem conexão', 'error');
+    }
+  }
+
+  async function removerConc(handle) {
+    if (!confirm(`Remover todos os snapshots de @${handle}? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const r = await fetch(`/api/concorrentes/${encodeURIComponent(handle)}`, { method: 'DELETE' });
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Erro', 'error'); return; }
+      toast(`✓ ${j.removidos} snapshots removidos`);
+      fecharModal();
+      loadConcorrentes();
+    } catch (e) {
+      toast('Erro de conexão', 'error');
+    }
   }
 
   // ============= INIT =============

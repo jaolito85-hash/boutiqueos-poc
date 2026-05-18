@@ -177,6 +177,20 @@ CREATE TABLE IF NOT EXISTS competitor_snapshots (
 CREATE INDEX IF NOT EXISTS idx_comp_username ON competitor_snapshots(username);
 CREATE INDEX IF NOT EXISTS idx_comp_date ON competitor_snapshots(snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_comp_plat_user ON competitor_snapshots(plataforma, username);
+
+-- Registro de cada execução do analisar (mesmo handle pode ser re-analisado várias vezes
+-- no mesmo dia; competitor_snapshots faz UPSERT por dia, então não conta execuções).
+-- Esta tabela é a fonte da verdade pra throttle diário de uso.
+CREATE TABLE IF NOT EXISTS competitor_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    plataforma TEXT NOT NULL DEFAULT 'instagram',
+    run_date DATE NOT NULL,
+    custo_usd REAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_comp_runs_date ON competitor_runs(run_date);
 """
 
 # Migrations para bancos já existentes (idempotente — captura OperationalError quando a coluna já existe)
@@ -1033,6 +1047,35 @@ def list_competitor_snapshots(
         params.append(limit)
         rows = conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def log_competitor_run(
+    username: str, plataforma: str = "instagram", custo_usd: float | None = None
+) -> int:
+    """Registra 1 execução do analisar (usado pelo throttle diário)."""
+    conn = get_connection()
+    try:
+        cur = conn.execute("""
+            INSERT INTO competitor_runs (username, plataforma, run_date, custo_usd)
+            VALUES (?, ?, DATE('now', 'localtime'), ?)
+        """, (username, plataforma, custo_usd))
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def count_competitor_runs_today() -> int:
+    """Conta execuções do analisar feitas hoje (data local)."""
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT COUNT(*) AS n FROM competitor_runs
+            WHERE run_date = DATE('now', 'localtime')
+        """).fetchone()
+        return int(row["n"] or 0)
     finally:
         conn.close()
 

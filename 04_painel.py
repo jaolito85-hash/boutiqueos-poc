@@ -30,6 +30,7 @@ from database import (
 from catalogo import bp_catalogo
 from leads_import import bp_leads
 from prospects_review import bp_review
+from competitor_panel import bp_competitor
 import json
 
 app = Flask(__name__, static_folder="painel", static_url_path="")
@@ -37,6 +38,7 @@ CORS(app)
 app.register_blueprint(bp_catalogo)
 app.register_blueprint(bp_leads)
 app.register_blueprint(bp_review)
+app.register_blueprint(bp_competitor)
 
 
 # ============================================================================
