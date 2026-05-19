@@ -18,12 +18,49 @@ Configuração:
 """
 
 import os
+import re
 import json
 from openai import OpenAI
 from database import get_product
+from links import GRUPO_VIP_URL, cta_link
 
 CAPTION_MODEL = os.getenv("HAUS_CAPTION_MODEL", "gpt-4.1-mini")
-GRUPO_VIP_URL = "vip-haus.vercel.app"
+
+# Mapeia cada saída do LLM ao canal UTM correspondente (alimenta cta_link).
+_CAPTION_CANAIS = {
+    "instagram_feed": "feed_organico",
+    "instagram_story": "story",
+    "tiktok": "tiktok",
+    "whatsapp_grupo": "whatsapp_vip",
+}
+
+# Regex usada no pós-processamento pra trocar o link genérico (sem UTM)
+# pelo link específico de cada canal. Aceita variações com http(s)://, www., trailing slash.
+_VIP_LINK_RE = re.compile(
+    r"https?://(?:www\.)?vip-haus\.vercel\.app/?|(?<![a-z0-9.-])vip-haus\.vercel\.app/?",
+    re.IGNORECASE,
+)
+
+
+def _slugify_campanha(produto: dict) -> str | None:
+    """Deriva um utm_campaign a partir da coleção do produto (se houver)."""
+    colecao = (produto or {}).get("colecao") or ""
+    colecao = colecao.strip().lower()
+    if not colecao:
+        return None
+    slug = re.sub(r"[^a-z0-9]+", "_", colecao).strip("_")
+    return slug or None
+
+
+def _aplicar_utm(captions: dict, produto: dict) -> dict:
+    """Substitui ocorrências do link genérico pelo link com utm_source de cada canal."""
+    campanha = _slugify_campanha(produto)
+    saida = {}
+    for chave, texto in captions.items():
+        canal = _CAPTION_CANAIS.get(chave, "organico_outro")
+        novo_link = cta_link(canal, campanha)
+        saida[chave] = _VIP_LINK_RE.sub(novo_link, texto)
+    return saida
 
 _client = None
 
@@ -179,7 +216,9 @@ def gerar_captions(product_id: int, banner_payload: dict | None = None) -> dict:
         raise RuntimeError(f"resposta da OpenAI sem as chaves: {faltando}. Raw: {raw[:200]}")
 
     # Coagir tudo a string e limpar espaços extras
-    return {k: str(captions[k]).strip() for k in esperadas}
+    captions = {k: str(captions[k]).strip() for k in esperadas}
+    # Aplicar UTM tracking nos links finais de cada canal
+    return _aplicar_utm(captions, produto)
 
 
 # ----------------------------------------------------------------------------

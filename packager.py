@@ -21,9 +21,11 @@ from pathlib import Path
 
 from database import get_product, get_product_media
 
+from links import cta_link
+
 ROOT = Path(__file__).parent
 PACKAGES_DIR = ROOT / "media" / "packages"
-GRUPO_VIP_URL = "vip-haus.vercel.app"
+GRUPO_VIP_URL = cta_link("readme_pacote")
 
 # Quais "modos" de mídia são banners postáveis (não incluímos fotos cruas no pacote)
 BANNER_MODES = {"ai_banner", "retry_fix", "template_banner"}

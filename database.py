@@ -11,7 +11,7 @@ Uso:
 import sqlite3
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "prospects.db"
@@ -53,12 +53,18 @@ CREATE TABLE IF NOT EXISTS prospects (
     -- SENT: Aline enviou a DM
     -- REPLIED: a pessoa respondeu
     -- ENTERED_GROUP: entrou no grupo VIP
+    -- CUSTOMER: virou cliente confirmado (Aline marcou compra)
 
     -- timestamps
     scraped_at TIMESTAMP,
     qualified_at TIMESTAMP,
     sent_at TIMESTAMP,
     reply_at TIMESTAMP,
+    entered_group_at TIMESTAMP,
+    customer_at TIMESTAMP,
+
+    -- conversão final
+    valor_compra REAL,  -- valor da compra que efetivou o lead (opcional)
 
     -- proteção (rate limiting da Aline)
     sent_by_account TEXT,  -- qual conta IG enviou (pra futuro)
@@ -72,6 +78,8 @@ CREATE INDEX IF NOT EXISTS idx_username ON prospects(username);
 CREATE INDEX IF NOT EXISTS idx_plat_user ON prospects(plataforma, username);
 CREATE INDEX IF NOT EXISTS idx_score ON prospects(score);
 CREATE INDEX IF NOT EXISTS idx_daily_sent ON prospects(daily_sent_date);
+-- idx_sent_at, idx_reply_at, idx_entered_group_at, idx_customer_at criados em _MIGRATIONS
+-- (essas colunas podem não existir em bancos antigos antes do ALTER TABLE rodar).
 
 -- Tabela de eventos (auditoria, pra debug e métricas)
 CREATE TABLE IF NOT EXISTS events (
@@ -191,6 +199,30 @@ CREATE TABLE IF NOT EXISTS competitor_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_comp_runs_date ON competitor_runs(run_date);
+
+-- ============================================================================
+-- VENDAS — histórico de pedidos por cliente (suporta recompra)
+-- ============================================================================
+-- prospects.valor_compra guarda a 1ª compra (compatibilidade). Esta tabela
+-- guarda TODAS as compras (1:N com prospect) — fonte de verdade pra LTV, ROAS,
+-- audiência value-based no Meta Ads.
+
+CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    prospect_id INTEGER NOT NULL,
+    valor_brl REAL NOT NULL,
+    canal TEXT,                               -- whatsapp_dm | grupo_vip | loja_fisica | meta_ad | organico_outro
+    utm_source TEXT,                          -- preenchido se veio via link rastreado
+    utm_campaign TEXT,
+    produtos_json TEXT,                       -- snapshot leve: [{nome, preco}]
+    notas TEXT,                               -- nota livre da Aline
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (prospect_id) REFERENCES prospects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_prospect ON orders(prospect_id);
+CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_canal ON orders(canal);
 """
 
 # Migrations para bancos já existentes (idempotente — captura OperationalError quando a coluna já existe)
@@ -200,6 +232,14 @@ _MIGRATIONS = [
     "ALTER TABLE product_media ADD COLUMN target_format TEXT",
     "ALTER TABLE product_media ADD COLUMN banner_payload TEXT",
     "CREATE INDEX IF NOT EXISTS idx_media_mode ON product_media(mode)",
+    # Sprint 4 — tracking de conversão pós-envio
+    "ALTER TABLE prospects ADD COLUMN entered_group_at TIMESTAMP",
+    "ALTER TABLE prospects ADD COLUMN customer_at TIMESTAMP",
+    "ALTER TABLE prospects ADD COLUMN valor_compra REAL",
+    "CREATE INDEX IF NOT EXISTS idx_sent_at ON prospects(sent_at)",
+    "CREATE INDEX IF NOT EXISTS idx_reply_at ON prospects(reply_at)",
+    "CREATE INDEX IF NOT EXISTS idx_entered_group_at ON prospects(entered_group_at)",
+    "CREATE INDEX IF NOT EXISTS idx_customer_at ON prospects(customer_at)",
 ]
 
 
@@ -550,7 +590,7 @@ def get_prospect_by_id(prospect_id: int) -> dict | None:
 
 def set_prospect_status(prospect_id: int, novo_status: str, *, event_type: str | None = None) -> dict | None:
     """Muda status do prospect. Retorna o prospect atualizado ou None se não existe."""
-    valid = {"NEW", "QUALIFIED", "READY", "REVIEW", "DISCARDED", "SENT", "REPLIED", "ENTERED_GROUP"}
+    valid = {"NEW", "QUALIFIED", "READY", "REVIEW", "DISCARDED", "SENT", "REPLIED", "ENTERED_GROUP", "CUSTOMER"}
     if novo_status not in valid:
         raise ValueError(f"status inválido: {novo_status}")
     conn = get_connection()
@@ -574,7 +614,7 @@ def bulk_set_status(prospect_ids: list[int], novo_status: str, *, event_type: st
     """Aplica novo status a uma lista de IDs. Retorna quantos foram atualizados."""
     if not prospect_ids:
         return 0
-    valid = {"NEW", "QUALIFIED", "READY", "REVIEW", "DISCARDED", "SENT", "REPLIED", "ENTERED_GROUP"}
+    valid = {"NEW", "QUALIFIED", "READY", "REVIEW", "DISCARDED", "SENT", "REPLIED", "ENTERED_GROUP", "CUSTOMER"}
     if novo_status not in valid:
         raise ValueError(f"status inválido: {novo_status}")
     placeholders = ",".join("?" * len(prospect_ids))
@@ -670,6 +710,571 @@ def mark_as_not_client(username: str):
         conn.commit()
     finally:
         conn.close()
+
+
+# ============================================================================
+# CONVERSÃO PÓS-ENVIO — tracking de respondeu / entrou no grupo / comprou
+# ============================================================================
+# Plataforma é opcional (default 'instagram') por compat com chamadas legadas
+# vindas do painel atual, que ainda envia só o username. Pra leads do TikTok
+# vindos do CSV, o front passa plataforma explicitamente.
+
+def mark_as_replied(username: str, plataforma: str = "instagram") -> bool:
+    """SENT → REPLIED. Aceita pular status (REVIEW/READY) — Aline pode marcar
+    direto se a pessoa respondeu antes de a DM ser registrada como enviada."""
+    conn = get_connection()
+    try:
+        now = datetime.now().isoformat()
+        cur = conn.execute("""
+            UPDATE prospects SET status = 'REPLIED', reply_at = ?
+            WHERE plataforma = ? AND username = ?
+        """, (now, plataforma, username))
+        if cur.rowcount:
+            log_event(conn, username, "REPLIED", {"plataforma": plataforma})
+            conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def mark_as_entered_group(username: str, plataforma: str = "instagram") -> bool:
+    """REPLIED/SENT → ENTERED_GROUP. Marca entrada no grupo VIP."""
+    conn = get_connection()
+    try:
+        now = datetime.now().isoformat()
+        cur = conn.execute("""
+            UPDATE prospects SET status = 'ENTERED_GROUP', entered_group_at = ?
+            WHERE plataforma = ? AND username = ?
+        """, (now, plataforma, username))
+        if cur.rowcount:
+            log_event(conn, username, "ENTERED_GROUP", {"plataforma": plataforma})
+            conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def mark_as_customer(username: str, plataforma: str = "instagram",
+                     valor: float | None = None) -> bool:
+    """Qualquer status → CUSTOMER. Salva valor opcional da compra."""
+    conn = get_connection()
+    try:
+        now = datetime.now().isoformat()
+        cur = conn.execute("""
+            UPDATE prospects SET
+                status = 'CUSTOMER',
+                customer_at = ?,
+                valor_compra = COALESCE(?, valor_compra)
+            WHERE plataforma = ? AND username = ?
+        """, (now, valor, plataforma, username))
+        if cur.rowcount:
+            log_event(conn, username, "BECAME_CUSTOMER",
+                      {"plataforma": plataforma, "valor": valor})
+            conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+# ============================================================================
+# FOLLOWUP — listagem paginada de leads pós-envio (aba "Acompanhar")
+# ============================================================================
+
+_FOLLOWUP_STATUSES = ("SENT", "REPLIED", "ENTERED_GROUP", "CUSTOMER")
+
+def list_followup_prospects(
+    *,
+    statuses: list[str] | None = None,
+    plataforma: str | None = None,
+    source_loja: str | None = None,
+    days: int | None = None,
+    busca: str | None = None,
+    sort: str = "sent_recent",
+    page: int = 1,
+    page_size: int = 30,
+) -> dict:
+    """Lista leads em status pós-envio. Filtros e ordenação.
+
+    Args:
+        statuses: subset de SENT/REPLIED/ENTERED_GROUP/CUSTOMER (default: todos)
+        plataforma: 'instagram' | 'tiktok' | None
+        source_loja: filtra exato (ex: 'degustacasa')
+        days: janela em dias contando de sent_at (None = tudo)
+        busca: substring em username/source_loja
+        sort: 'sent_recent' | 'sent_oldest' | 'value_desc'
+
+    Returns:
+        {"items": [...], "total": int, "page": int, "page_size": int, "pages": int}
+    """
+    if statuses:
+        statuses = [s for s in statuses if s in _FOLLOWUP_STATUSES]
+    if not statuses:
+        statuses = list(_FOLLOWUP_STATUSES)
+    placeholders = ",".join("?" * len(statuses))
+
+    where = [f"status IN ({placeholders})"]
+    params: list = list(statuses)
+
+    if plataforma in ("instagram", "tiktok"):
+        where.append("plataforma = ?")
+        params.append(plataforma)
+    if source_loja:
+        where.append("source_loja = ?")
+        params.append(source_loja)
+    if days and days > 0:
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        where.append("sent_at >= ?")
+        params.append(cutoff)
+    if busca:
+        like = f"%{busca.lower()}%"
+        where.append("(LOWER(username) LIKE ? OR LOWER(IFNULL(source_loja,'')) LIKE ?)")
+        params.extend([like, like])
+
+    order_map = {
+        "sent_recent": "sent_at DESC",
+        "sent_oldest": "sent_at ASC",
+        "value_desc": "valor_compra DESC NULLS LAST, sent_at DESC",
+    }
+    order_by = order_map.get(sort, order_map["sent_recent"])
+
+    page = max(1, int(page))
+    page_size = max(1, min(100, int(page_size)))
+    offset = (page - 1) * page_size
+
+    where_sql = " AND ".join(where)
+    conn = get_connection()
+    try:
+        total = conn.execute(
+            f"SELECT COUNT(*) FROM prospects WHERE {where_sql}", params
+        ).fetchone()[0]
+        rows = conn.execute(
+            f"SELECT * FROM prospects WHERE {where_sql} "
+            f"ORDER BY {order_by} LIMIT ? OFFSET ?",
+            (*params, page_size, offset)
+        ).fetchall()
+        items = [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+    pages = (total + page_size - 1) // page_size if total else 0
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": pages,
+    }
+
+
+# ============================================================================
+# INSIGHTS — agregações para o dashboard
+# ============================================================================
+# Todas as queries são read-only e SQL puro. Performance suficiente até
+# centenas de milhares de prospects (índices em status, sent_at, etc).
+
+def funnel_counts() -> dict:
+    """Contagem por status, na ordem do funil."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) AS n FROM prospects GROUP BY status"
+        ).fetchall()
+        by_status = {r["status"]: r["n"] for r in rows}
+    finally:
+        conn.close()
+    # ordem canônica
+    ordered = [
+        "NEW", "QUALIFIED", "REVIEW", "READY",
+        "SENT", "REPLIED", "ENTERED_GROUP", "CUSTOMER", "DISCARDED",
+    ]
+    return {s: by_status.get(s, 0) for s in ordered}
+
+
+def conversion_rates() -> dict:
+    """Taxas globais: reply/group/customer sobre o total SENT (cumulativo)."""
+    f = funnel_counts()
+    # SENT cumulativo = leads que pelo menos chegaram a sair como DM
+    sent_total = f["SENT"] + f["REPLIED"] + f["ENTERED_GROUP"] + f["CUSTOMER"]
+    replied_total = f["REPLIED"] + f["ENTERED_GROUP"] + f["CUSTOMER"]
+    group_total = f["ENTERED_GROUP"] + f["CUSTOMER"]
+    customer_total = f["CUSTOMER"]
+
+    def _rate(n, d):
+        return round(n / d, 4) if d else 0.0
+
+    # Tempo médio até resposta (em horas), para os que responderam
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT AVG((julianday(reply_at) - julianday(sent_at)) * 24.0) AS avg_h
+            FROM prospects
+            WHERE sent_at IS NOT NULL AND reply_at IS NOT NULL
+        """).fetchone()
+        avg_reply_hours = round(row["avg_h"], 2) if row and row["avg_h"] is not None else None
+    finally:
+        conn.close()
+
+    return {
+        "sent_total": sent_total,
+        "reply_rate": _rate(replied_total, sent_total),
+        "group_rate": _rate(group_total, sent_total),
+        "customer_rate": _rate(customer_total, sent_total),
+        "avg_reply_hours": avg_reply_hours,
+    }
+
+
+def conversion_by_source(limit: int = 10) -> list[dict]:
+    """Agregação por source_loja: quantos SENT, quantos REPLIED+, quantos CUSTOMER."""
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT
+                COALESCE(source_loja, '(sem fonte)') AS source_loja,
+                SUM(CASE WHEN status IN ('SENT','REPLIED','ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS sent,
+                SUM(CASE WHEN status IN ('REPLIED','ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS replied,
+                SUM(CASE WHEN status IN ('ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS group_in,
+                SUM(CASE WHEN status = 'CUSTOMER' THEN 1 ELSE 0 END) AS customer
+            FROM prospects
+            WHERE status IN ('SENT','REPLIED','ENTERED_GROUP','CUSTOMER')
+            GROUP BY source_loja
+            ORDER BY sent DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+    finally:
+        conn.close()
+
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["reply_rate"] = round(d["replied"] / d["sent"], 4) if d["sent"] else 0.0
+        d["customer_rate"] = round(d["customer"] / d["sent"], 4) if d["sent"] else 0.0
+        out.append(d)
+    return out
+
+
+def conversion_by_intent() -> list[dict]:
+    """Agregação por intent extraído de sinais (intent_perguntando_preco etc)."""
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT
+                CASE
+                    WHEN sinais LIKE '%intent_perguntando_preco%'   THEN 'perguntando_preco'
+                    WHEN sinais LIKE '%intent_buscando_atendimento%' THEN 'buscando_atendimento'
+                    WHEN sinais LIKE '%intent_perguntando_local%'    THEN 'perguntando_local'
+                    ELSE '(sem intent)'
+                END AS intent,
+                SUM(CASE WHEN status IN ('SENT','REPLIED','ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS sent,
+                SUM(CASE WHEN status IN ('REPLIED','ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS replied,
+                SUM(CASE WHEN status = 'CUSTOMER' THEN 1 ELSE 0 END) AS customer
+            FROM prospects
+            WHERE status IN ('SENT','REPLIED','ENTERED_GROUP','CUSTOMER')
+            GROUP BY intent
+            ORDER BY sent DESC
+        """).fetchall()
+    finally:
+        conn.close()
+
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["reply_rate"] = round(d["replied"] / d["sent"], 4) if d["sent"] else 0.0
+        out.append(d)
+    return out
+
+
+def conversion_by_platform() -> list[dict]:
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT
+                plataforma,
+                SUM(CASE WHEN status IN ('SENT','REPLIED','ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS sent,
+                SUM(CASE WHEN status IN ('REPLIED','ENTERED_GROUP','CUSTOMER') THEN 1 ELSE 0 END) AS replied,
+                SUM(CASE WHEN status = 'CUSTOMER' THEN 1 ELSE 0 END) AS customer
+            FROM prospects
+            WHERE status IN ('SENT','REPLIED','ENTERED_GROUP','CUSTOMER')
+            GROUP BY plataforma
+            ORDER BY sent DESC
+        """).fetchall()
+    finally:
+        conn.close()
+
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["reply_rate"] = round(d["replied"] / d["sent"], 4) if d["sent"] else 0.0
+        out.append(d)
+    return out
+
+
+def activity_timeseries(days: int = 30) -> list[dict]:
+    """Atividade diária dos últimos N dias.
+
+    Retorna lista de {date, sent, replied, group_in, customer}.
+    Inclui dias com zero (preenche gaps) pra gráfico contínuo.
+    """
+    today = datetime.now().date()
+    start = today - timedelta(days=days - 1)
+
+    conn = get_connection()
+    try:
+        sent_rows = conn.execute("""
+            SELECT DATE(sent_at) AS d, COUNT(*) AS n
+            FROM prospects
+            WHERE sent_at IS NOT NULL AND DATE(sent_at) >= ?
+            GROUP BY DATE(sent_at)
+        """, (start.isoformat(),)).fetchall()
+        rep_rows = conn.execute("""
+            SELECT DATE(reply_at) AS d, COUNT(*) AS n
+            FROM prospects
+            WHERE reply_at IS NOT NULL AND DATE(reply_at) >= ?
+            GROUP BY DATE(reply_at)
+        """, (start.isoformat(),)).fetchall()
+        grp_rows = conn.execute("""
+            SELECT DATE(entered_group_at) AS d, COUNT(*) AS n
+            FROM prospects
+            WHERE entered_group_at IS NOT NULL AND DATE(entered_group_at) >= ?
+            GROUP BY DATE(entered_group_at)
+        """, (start.isoformat(),)).fetchall()
+        cus_rows = conn.execute("""
+            SELECT DATE(customer_at) AS d, COUNT(*) AS n
+            FROM prospects
+            WHERE customer_at IS NOT NULL AND DATE(customer_at) >= ?
+            GROUP BY DATE(customer_at)
+        """, (start.isoformat(),)).fetchall()
+    finally:
+        conn.close()
+
+    sent_map = {r["d"]: r["n"] for r in sent_rows}
+    rep_map = {r["d"]: r["n"] for r in rep_rows}
+    grp_map = {r["d"]: r["n"] for r in grp_rows}
+    cus_map = {r["d"]: r["n"] for r in cus_rows}
+
+    series = []
+    for i in range(days):
+        d = (start + timedelta(days=i)).isoformat()
+        series.append({
+            "date": d,
+            "sent": sent_map.get(d, 0),
+            "replied": rep_map.get(d, 0),
+            "group_in": grp_map.get(d, 0),
+            "customer": cus_map.get(d, 0),
+        })
+    return series
+
+
+# ============================================================================
+# VENDAS — orders (recompra) + LTV
+# ============================================================================
+# A 1ª compra também atualiza prospects.valor_compra / customer_at via
+# mark_as_customer (já existente). Esta tabela armazena TODAS as compras.
+
+def create_order(
+    prospect_id: int,
+    valor_brl: float,
+    *,
+    canal: str | None = None,
+    utm_source: str | None = None,
+    utm_campaign: str | None = None,
+    produtos: list[dict] | None = None,
+    notas: str | None = None,
+) -> int:
+    """Registra uma compra. Retorna o id criado."""
+    if valor_brl is None or valor_brl < 0:
+        raise ValueError("valor_brl precisa ser >= 0")
+    conn = get_connection()
+    try:
+        cur = conn.execute("""
+            INSERT INTO orders (
+                prospect_id, valor_brl, canal, utm_source, utm_campaign,
+                produtos_json, notas
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            prospect_id, float(valor_brl), canal, utm_source, utm_campaign,
+            json.dumps(produtos, ensure_ascii=False) if produtos else None,
+            notas,
+        ))
+        conn.commit()
+        # Log no events pra trilha de auditoria, igual outros marcos
+        log_event(conn, _get_prospect_username(conn, prospect_id) or f"id_{prospect_id}",
+                  "ORDER_CREATED",
+                  {"valor_brl": float(valor_brl), "canal": canal, "order_id": cur.lastrowid})
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def _get_prospect_username(conn, prospect_id: int) -> str | None:
+    row = conn.execute(
+        "SELECT username FROM prospects WHERE id = ?", (prospect_id,)
+    ).fetchone()
+    return row["username"] if row else None
+
+
+def list_orders_by_prospect(prospect_id: int) -> list[dict]:
+    """Histórico de pedidos do cliente, mais recente primeiro."""
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT * FROM orders WHERE prospect_id = ?
+            ORDER BY created_at DESC, id DESC
+        """, (prospect_id,)).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        if d.get("produtos_json"):
+            try:
+                d["produtos"] = json.loads(d["produtos_json"])
+            except (ValueError, TypeError):
+                d["produtos"] = []
+        else:
+            d["produtos"] = []
+        out.append(d)
+    return out
+
+
+def customer_summary(prospect_id: int) -> dict:
+    """Resumo derivado de orders pra 1 cliente: LTV, ticket médio, dias desde
+    última compra. Útil pra cards na aba 'Vendas' e value-based audience na Meta."""
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT
+                COUNT(*) AS total_pedidos,
+                COALESCE(SUM(valor_brl), 0) AS lifetime_value_brl,
+                COALESCE(AVG(valor_brl), 0) AS ticket_medio_brl,
+                MIN(created_at) AS primeira_compra,
+                MAX(created_at) AS ultima_compra
+            FROM orders
+            WHERE prospect_id = ?
+        """, (prospect_id,)).fetchone()
+    finally:
+        conn.close()
+
+    if not row or row["total_pedidos"] == 0:
+        return {
+            "total_pedidos": 0,
+            "lifetime_value_brl": 0.0,
+            "ticket_medio_brl": 0.0,
+            "primeira_compra": None,
+            "ultima_compra": None,
+            "dias_desde_ultima": None,
+        }
+
+    d = dict(row)
+    d["lifetime_value_brl"] = round(d["lifetime_value_brl"] or 0, 2)
+    d["ticket_medio_brl"] = round(d["ticket_medio_brl"] or 0, 2)
+    if d.get("ultima_compra"):
+        try:
+            ult = datetime.fromisoformat(d["ultima_compra"])
+            d["dias_desde_ultima"] = (datetime.now() - ult).days
+        except (ValueError, TypeError):
+            d["dias_desde_ultima"] = None
+    else:
+        d["dias_desde_ultima"] = None
+    return d
+
+
+def top_clientes_por_ltv(limit: int = 20) -> list[dict]:
+    """Top clientes por LTV (soma de orders.valor_brl). Base da Custom Audience Meta."""
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT
+                p.id AS prospect_id,
+                p.username,
+                p.plataforma,
+                p.cidade_loja,
+                p.source_loja,
+                p.customer_at,
+                SUM(o.valor_brl) AS lifetime_value_brl,
+                COUNT(o.id) AS total_pedidos,
+                AVG(o.valor_brl) AS ticket_medio_brl,
+                MAX(o.created_at) AS ultima_compra
+            FROM prospects p
+            JOIN orders o ON o.prospect_id = p.id
+            GROUP BY p.id
+            ORDER BY lifetime_value_brl DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["lifetime_value_brl"] = round(d["lifetime_value_brl"] or 0, 2)
+        d["ticket_medio_brl"] = round(d["ticket_medio_brl"] or 0, 2)
+        out.append(d)
+    return out
+
+
+def list_clientes(limit: int = 200, busca: str | None = None) -> list[dict]:
+    """Lista clientes (prospects com status='CUSTOMER' OU com >=1 order),
+    incluindo LTV/ticket médio derivados. Ordena por última compra desc."""
+    conn = get_connection()
+    try:
+        sql = """
+            SELECT
+                p.id AS prospect_id,
+                p.username,
+                p.plataforma,
+                p.cidade_loja,
+                p.source_loja,
+                p.status,
+                p.customer_at,
+                p.valor_compra,
+                COALESCE(SUM(o.valor_brl), p.valor_compra, 0) AS lifetime_value_brl,
+                COUNT(o.id) AS total_pedidos,
+                MAX(o.created_at) AS ultima_compra
+            FROM prospects p
+            LEFT JOIN orders o ON o.prospect_id = p.id
+            WHERE p.status = 'CUSTOMER' OR o.id IS NOT NULL
+        """
+        params: list = []
+        if busca:
+            sql += " AND (p.username LIKE ? OR p.source_loja LIKE ?)"
+            like = f"%{busca}%"
+            params.extend([like, like])
+        sql += """
+            GROUP BY p.id
+            ORDER BY ultima_compra DESC NULLS LAST, p.customer_at DESC NULLS LAST
+            LIMIT ?
+        """
+        params.append(limit)
+        rows = conn.execute(sql, params).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["lifetime_value_brl"] = round(d["lifetime_value_brl"] or 0, 2)
+        out.append(d)
+    return out
+
+
+def get_customer_by_username(username: str, plataforma: str = "instagram") -> dict | None:
+    """Busca o prospect/cliente + summary derivado pra modal de detalhe."""
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT id, username, plataforma, source_loja, cidade_loja,
+                   status, customer_at, valor_compra, sent_at, reply_at,
+                   entered_group_at, bio, seguidores
+            FROM prospects
+            WHERE plataforma = ? AND username = ?
+        """, (plataforma, username)).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    d["summary"] = customer_summary(d["id"])
+    d["orders"] = list_orders_by_prospect(d["id"])
+    return d
 
 
 # ============================================================================

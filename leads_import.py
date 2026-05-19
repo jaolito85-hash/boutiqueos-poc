@@ -23,6 +23,7 @@ import io
 from flask import Blueprint, request, jsonify
 
 from database import prospect_exists, save_imported_prospect
+from links import cta_link
 
 
 # ============================================================================
@@ -32,7 +33,9 @@ from database import prospect_exists, save_imported_prospect
 MAX_FILE_BYTES = 5 * 1024 * 1024   # 5 MB
 MAX_ROWS = 5000
 
-GRUPO_VIP_URL = "https://vip-haus.vercel.app"
+# UTM tracking: link da DM saída de CSV vai como utm_source=dm_outbound_csv.
+# Prefixo https:// preservado pra Instagram/WhatsApp renderizarem como link clicável.
+GRUPO_VIP_URL = "https://" + cta_link("dm_outbound_csv")
 
 # Templates de DM por intent. Premissa: a DM é enviada por um FUNCIONÁRIO da haus
 # pra uma pessoa que comentou em vídeo/post de TERCEIROS (não em post da haus).

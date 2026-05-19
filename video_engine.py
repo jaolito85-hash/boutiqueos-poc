@@ -31,6 +31,7 @@ from pathlib import Path
 
 from database import get_product, get_product_media, add_product_media, list_product_media
 from image_engine import _format_brl  # reuso do formatador R$ 1.095,00
+from links import cta_link  # UTM tracking nos overlays de vídeo
 
 # Modos cujo PNG já contém texto sobreposto pela IA — ruins como fonte de vídeo
 # (o template já adiciona texto próprio, daí o vídeo ficaria com texto duplicado).
@@ -43,7 +44,6 @@ VIDEOS_DIR = ROOT / "media" / "videos"
 
 DEFAULT_QUALITY = os.getenv("HAUS_VIDEO_QUALITY", "standard")
 RENDER_TIMEOUT = int(os.getenv("HAUS_VIDEO_TIMEOUT_SEC", "600"))
-CTA_URL = "vip-haus.vercel.app"
 TARGET_FORMAT_REEL = "instagram_story"  # 1080x1920 (reels também usam essa proporção)
 
 
@@ -78,11 +78,12 @@ def _aplicar_template(job_dir: Path, produto: dict, foto_src: Path):
     shutil.copy2(foto_src, destino_foto)
 
     # Tokens
+    colecao_slug = re.sub(r"[^a-z0-9]+", "_", (produto.get("colecao") or "").strip().lower()).strip("_") or None
     tokens = {
         "PRODUCT_NAME": (produto.get("nome") or "").strip(),
         "COLLECTION_LABEL": _resolve_collection_label(produto),
         "PRICE": _format_brl(produto.get("faixa_preco")) or "—",
-        "CTA_URL": CTA_URL,
+        "CTA_URL": cta_link("reel_video", colecao_slug),
     }
 
     for f in (job_dir / "compositions").iterdir():
