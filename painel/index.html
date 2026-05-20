@@ -8,7 +8,8 @@
 <title>haus studio — Painel interno</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=Outfit:wght@300;400;500;600&family=Inter:wght@500;600;700&family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/haus-design-tokens.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -52,6 +53,40 @@
     --shadow-sm: 0 2px 6px rgba(20, 25, 27, 0.06);
     --shadow-md: 0 6px 18px rgba(20, 25, 27, 0.10);
     --shadow-lg: 0 12px 32px rgba(20, 25, 27, 0.14);
+
+    /* WhatsApp UI — sidebar dark verde-musgo + bubbles clássico verde-claro */
+    --wa-dark-bg: #1F2A24;
+    --wa-dark-bg-2: #182019;
+    --wa-dark-item: #2A3830;
+    --wa-dark-item-active: #3D4E3A;
+    --wa-dark-text: #B5C0AC;
+    --wa-dark-text-active: #FFFFFF;
+    --wa-dark-line: rgba(255,255,255,0.08);
+    --wa-dark-gold: #D4C3A0;
+    --wa-bubble-out: #DCF8C6;
+    --wa-bubble-out-border: #C5E9A8;
+    --wa-bubble-in: #FFFFFF;
+    --wa-bubble-in-border: rgba(20, 25, 27, 0.08);
+    --wa-emerald: #2D6A3F;
+    --wa-emerald-hover: #25593A;
+    --wa-tick: #34A8FF;
+    --wa-thread-bg: #EFE6D2;
+
+    /* Design System "Footer WhatsApp CRM" — premium tokens */
+    --wa-primary-green: #1F5A43;
+    --wa-green-hover: #184736;
+    --wa-luxury-gold: #C9A34A;
+    --wa-luxury-gold-hover: #B8903E;
+    --wa-soft-gold: #EAD8A5;
+    --wa-ivory: #F5F1E8;
+    --wa-surface: #FFFCF7;
+    --wa-border-neutral: #E5DDCF;
+    --wa-text-primary: #20231F;
+    --wa-text-secondary: #6F746C;
+    --wa-status-green: #2DBE60;
+    --wa-shadow-btn: 0 6px 18px rgba(0,0,0,0.08);
+    --wa-alert: #D6492E;
+    --wa-alert-soft: rgba(214,73,46,0.16);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -450,53 +485,200 @@
     margin: 0 2px;
   }
 
+  /* ============= APP TOPBAR (brand + tabs + tools) ============= */
+  .app-topbar {
+    max-width: 1400px;
+    margin: 0 auto 22px;
+    padding: 0 8px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+  }
+  .app-brand {
+    flex-shrink: 0;
+    text-align: left;
+    line-height: 1.1;
+  }
+  .app-brand .brand {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .app-brand .brand-dot { color: var(--gold); }
+  .app-brand .subtitle {
+    font-size: 9.5px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  @media (max-width: 1100px) {
+    .app-brand .subtitle { display: none; }
+    .app-brand .brand { font-size: 18px; }
+  }
+  @media (max-width: 820px) {
+    .app-brand { display: none; }
+  }
+
   /* ============= TABS ============= */
   .tabs {
-    max-width: 920px;
-    margin: 0 auto 24px;
+    width: 100%;
+    margin: 0;
     display: flex;
-    gap: 4px;
+    gap: 2px;
     background: var(--bg-card);
     border: 1px solid var(--line);
     border-radius: 999px;
     padding: 5px;
     box-shadow: var(--shadow-sm);
-    /* Em telas estreitas, permite rolar horizontalmente em vez de quebrar */
     overflow-x: auto;
     scrollbar-width: none;
   }
   .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-width: 0;
-    padding: 11px 12px;
+    padding: 9px 14px;
     border: none;
     background: transparent;
     border-radius: 999px;
     font-family: 'Outfit', sans-serif;
-    font-size: 11.5px;
-    font-weight: 600;
-    letter-spacing: 0.10em;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--ink-soft);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
   }
   .tab:hover { color: var(--ink); background: var(--sage-soft); }
   .tab.active {
     background: linear-gradient(135deg, var(--sage-deep) 0%, #2D5526 100%);
     color: #FFF;
+    font-weight: 600;
     box-shadow: 0 4px 12px rgba(61, 110, 53, 0.32), inset 0 1px 0 rgba(255,255,255,0.10);
   }
   .tab.active:hover { color: #FFF; background: linear-gradient(135deg, var(--sage-deep) 0%, #2D5526 100%); }
-  /* Em telas muito estreitas (< 720px), barra fica scrollável e tabs ficam compactas */
-  @media (max-width: 720px) {
-    .tab {
-      flex: 0 0 auto;
-      padding: 9px 14px;
-      font-size: 11px;
-    }
+  .tab-ico {
+    font-size: 14px;
+    opacity: 0.7;
+    line-height: 1;
+  }
+  .tab.active .tab-ico { opacity: 1; }
+  @media (max-width: 820px) {
+    .tab { flex: 0 0 auto; padding: 8px 12px; font-size: 12px; }
+    .tab-ico { display: none; }
+  }
+
+  /* ============= APP TOOLS (status + user) ============= */
+  .app-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .app-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: default;
+    transition: border-color 0.14s, color 0.14s;
+    box-shadow: var(--shadow-sm);
+  }
+  .app-status .app-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(46,139,71,0.18);
+    animation: app-status-pulse 2.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .app-status.offline {
+    color: var(--danger);
+    border-color: rgba(214,73,46,0.45);
+    background: var(--danger-soft);
+  }
+  .app-status.offline .app-status-dot {
+    background: var(--danger);
+    box-shadow: 0 0 0 3px rgba(214,73,46,0.22);
+    animation: none;
+  }
+  @keyframes app-status-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.25); opacity: 0.55; }
+  }
+
+  .app-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 14px 4px 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.14s, border-color 0.14s;
+    box-shadow: var(--shadow-sm);
+    font-family: 'Outfit', sans-serif;
+  }
+  .app-user:hover { background: var(--bg-soft); border-color: var(--line-strong); }
+  .app-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sage-deep) 0%, #2D5526 100%);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+  }
+  .app-user-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+    text-align: left;
+  }
+  .app-user-info strong {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .app-user-info small {
+    font-size: 10px;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+  }
+  @media (max-width: 1100px) {
+    .app-status .app-status-text { display: none; }
+    .app-status { padding: 7px 9px; }
+  }
+  @media (max-width: 820px) {
+    .app-user-info { display: none; }
+    .app-user { padding: 3px; border-radius: 50%; }
+    .app-topbar { grid-template-columns: 1fr auto; gap: 10px; }
   }
 
   /* ============= CATÁLOGO ============= */
@@ -2787,26 +2969,64 @@
     font-size: 13px;
     font-style: italic;
   }
+
+  /* WhatsApp view: ocupa quase toda a tela. Brand some, topbar fica compacto. */
+  body.wa-fullscreen {
+    padding: 10px 12px 0;
+    overflow: hidden;
+  }
+  body.wa-fullscreen .app-brand { display: none; }
+  body.wa-fullscreen .app-topbar {
+    margin: 0 auto 10px;
+    grid-template-columns: 1fr auto;
+  }
+  #view-whatsapp:not([hidden]) {
+    margin: 0 -12px;
+    height: calc(100vh - 78px);
+    min-height: 520px;
+    display: block;
+  }
+  @media (max-width: 820px) {
+    body.wa-fullscreen { padding: 6px 8px 0; }
+    #view-whatsapp:not([hidden]) { margin: 0 -8px; height: calc(100vh - 70px); }
+  }
 </style>
 </head>
 <body>
 
 <h1 class="sr-only">Painel interno haus studio</h1>
 
-<header>
-  <p class="brand">haus<span style="color: var(--gold);">.</span> studio</p>
-  <p class="subtitle">Painel interno</p>
-</header>
+<div class="app-topbar">
+  <header class="app-brand">
+    <p class="brand">haus<span class="brand-dot">.</span> studio</p>
+    <p class="subtitle">Painel interno</p>
+  </header>
 
-<nav class="tabs" aria-label="Seções do painel">
-  <button type="button" class="tab active" data-tab="outbound" onclick="setTab('outbound')">Outbound</button>
-  <button type="button" class="tab" data-tab="review" onclick="setTab('review')">Revisar <span class="tab-badge" id="tab-badge-review" aria-live="polite" hidden>0</span></button>
-  <button type="button" class="tab" data-tab="acompanhar" onclick="setTab('acompanhar')">Acompanhar <span class="tab-badge" id="tab-badge-followup" aria-live="polite" hidden>0</span></button>
-  <button type="button" class="tab" data-tab="vendas" onclick="setTab('vendas')">Vendas</button>
-  <button type="button" class="tab" data-tab="insights" onclick="setTab('insights')">Insights</button>
-  <button type="button" class="tab" data-tab="catalogo" onclick="setTab('catalogo')">Catálogo</button>
-  <button type="button" class="tab" data-tab="concorrentes" onclick="setTab('concorrentes')">Concorrentes</button>
-</nav>
+  <nav class="tabs" aria-label="Seções do painel">
+    <button type="button" class="tab active" data-tab="outbound" onclick="setTab('outbound')"><span class="tab-ico" aria-hidden="true">◎</span>Outbound</button>
+    <button type="button" class="tab" data-tab="review" onclick="setTab('review')"><span class="tab-ico" aria-hidden="true">✓</span>Revisar <span class="tab-badge" id="tab-badge-review" aria-live="polite" hidden>0</span></button>
+    <button type="button" class="tab" data-tab="acompanhar" onclick="setTab('acompanhar')"><span class="tab-ico" aria-hidden="true">◷</span>Acompanhar <span class="tab-badge" id="tab-badge-followup" aria-live="polite" hidden>0</span></button>
+    <button type="button" class="tab" data-tab="vendas" onclick="setTab('vendas')"><span class="tab-ico" aria-hidden="true">◆</span>Vendas</button>
+    <button type="button" class="tab" data-tab="insights" onclick="setTab('insights')"><span class="tab-ico" aria-hidden="true">◐</span>Insights</button>
+    <button type="button" class="tab" data-tab="catalogo" onclick="setTab('catalogo')"><span class="tab-ico" aria-hidden="true">▦</span>Catálogo</button>
+    <button type="button" class="tab" data-tab="concorrentes" onclick="setTab('concorrentes')"><span class="tab-ico" aria-hidden="true">◯</span>Concorrentes</button>
+    <button type="button" class="tab" data-tab="whatsapp" onclick="setTab('whatsapp')"><span class="tab-ico" aria-hidden="true">◉</span>WhatsApp <span class="tab-badge" id="tab-badge-wa" aria-live="polite" hidden>0</span></button>
+  </nav>
+
+  <div class="app-tools">
+    <div class="app-status" id="app-status" role="status" aria-live="polite" title="Status do sistema">
+      <span class="app-status-dot" aria-hidden="true"></span>
+      <span class="app-status-text" id="app-status-text">Online</span>
+    </div>
+    <button type="button" class="app-user" id="app-user" title="Conta">
+      <span class="app-user-avatar" aria-hidden="true">A</span>
+      <span class="app-user-info">
+        <strong>Atendimento</strong>
+        <small>Administradora</small>
+      </span>
+    </button>
+  </div>
+</div>
 
 <!-- ============= VIEW: OUTBOUND ============= -->
 <div id="view-outbound">
@@ -2830,14 +3050,14 @@
   </div>
 
   <div class="outbound-toolbar">
-    <button type="button" class="btn-import-csv" onclick="abrirModalImportarCsv()">+ Importar leads (CSV)</button>
+    <button type="button" class="btn-ghost" onclick="abrirModalImportarCsv()">+ Importar leads (CSV)</button>
   </div>
 
   <div class="card-wrap" id="content">
     <div class="loading">Carregando…</div>
   </div>
 
-  <p class="shortcuts">
+  <p class="foot-note">
     Atalhos: <kbd>C</kbd> copiar msg · <kbd>P</kbd> copiar foto · <kbd>E</kbd> enviei · <kbd>S</kbd> pular · <kbd>D</kbd> descartar
   </p>
 </div>
@@ -2892,7 +3112,7 @@
     <button type="button" id="review-next" onclick="reviewNext()">Próxima ›</button>
   </div>
 
-  <p class="review-shortcuts">
+  <p class="foot-note">
     Atalhos: <kbd>J</kbd>/<kbd>K</kbd> navegar · <kbd>A</kbd> aprovar · <kbd>D</kbd> descartar · <kbd>E</kbd> editar · <kbd>X</kbd> selecionar
   </p>
 </div>
@@ -2940,7 +3160,7 @@
     <button type="button" id="followup-next" onclick="followupNext()">Próxima ›</button>
   </div>
 
-  <p class="review-shortcuts">
+  <p class="foot-note">
     Atalhos: <kbd>J</kbd>/<kbd>K</kbd> navegar · <kbd>R</kbd> respondeu · <kbd>G</kbd> entrou no grupo · <kbd>C</kbd> comprou
   </p>
 </div>
@@ -2952,7 +3172,7 @@
       <h2>Vendas</h2>
       <div class="toolbar-sub">Clientes, LTV e recompra</div>
     </div>
-    <button type="button" class="btn-novo" onclick="abrirModalNovaVenda()">+ Registrar venda</button>
+    <button type="button" class="btn-dark" onclick="abrirModalNovaVenda()">+ Registrar venda</button>
   </div>
 
   <div class="vendas-stats" id="vendas-stats">
@@ -3090,7 +3310,7 @@
   <div class="catalogo-wrap">
     <div class="catalogo-toolbar">
       <h2>Produtos</h2>
-      <button type="button" class="btn-novo" onclick="abrirModalNovoProduto()">+ Novo produto</button>
+      <button type="button" class="btn-dark" onclick="abrirModalNovoProduto()">+ Novo produto</button>
     </div>
     <div id="ideias-container"></div>
     <div id="produto-grid">
@@ -3109,13 +3329,18 @@
       </div>
       <div class="conc-toolbar-right">
         <span class="uso-hoje" id="conc-uso-hoje" hidden></span>
-        <button type="button" class="btn-novo" onclick="abrirModalAnalisarConc()">+ Analisar concorrente</button>
+        <button type="button" class="btn-dark" onclick="abrirModalAnalisarConc()">+ Analisar concorrente</button>
       </div>
     </div>
     <div id="conc-grid">
       <div class="loading">Carregando…</div>
     </div>
   </div>
+</div>
+
+<!-- ============= VIEW: WHATSAPP (fragment carregado em runtime) ============= -->
+<div id="view-whatsapp" hidden>
+  <div class="loading">Carregando…</div>
 </div>
 
 <!-- ============= MODAL ============= -->
@@ -3318,13 +3543,13 @@
           <p class="edit-hint">Pode editar antes de copiar — ajuste como achar melhor.</p>
           <textarea class="message-text" id="message-textarea" oninput="updateMessageCount()">${p.mensagem || ''}</textarea>
           <div class="message-count" id="message-count">${(p.mensagem || '').length} caracteres</div>
-          <button type="button" class="btn btn-copy" id="btn-copy" onclick="copyMessage()">Copiar mensagem</button>
+          <button type="button" class="btn btn-gold" id="btn-copy" onclick="copyMessage()">Copiar mensagem</button>
         </div>
 
         ${sugHTML}
 
         <div class="actions">
-          <button type="button" class="btn btn-primary" onclick="action('sent', '✓ DM marcada como enviada')">
+          <button type="button" class="btn btn-dark" onclick="action('sent', '✓ DM marcada como enviada')">
             ✓ Enviei
           </button>
           <button type="button" class="btn btn-secondary" onclick="action('skip', 'Pulado — volta na fila')">
@@ -3515,10 +3740,11 @@
   });
 
   // ============= TABS =============
-  const VALID_TABS = ['outbound','review','acompanhar','vendas','insights','catalogo','concorrentes'];
+  const VALID_TABS = ['outbound','review','acompanhar','vendas','insights','catalogo','concorrentes','whatsapp'];
   const initialHash = (location.hash || '').slice(1);
   const initialTab = VALID_TABS.includes(initialHash) ? initialHash : 'outbound';
   let currentTab = initialTab;
+  let waFragmentLoaded = false;
   function setTab(tab) {
     if (!VALID_TABS.includes(tab)) tab = 'outbound';
     currentTab = tab;
@@ -3532,13 +3758,40 @@
     document.getElementById('view-insights').hidden = tab !== 'insights';
     document.getElementById('view-catalogo').hidden = tab !== 'catalogo';
     document.getElementById('view-concorrentes').hidden = tab !== 'concorrentes';
+    document.getElementById('view-whatsapp').hidden = tab !== 'whatsapp';
     if (tab === 'catalogo') loadCatalogo();
     if (tab === 'review') loadReview({ resetPage: true });
     if (tab === 'acompanhar') loadFollowup({ resetPage: true });
     if (tab === 'vendas') loadVendas();
     if (tab === 'insights') loadInsights();
     if (tab === 'concorrentes') loadConcorrentes();
+    if (tab === 'whatsapp') loadWhatsappTab();
+    document.body.classList.toggle('wa-fullscreen', tab === 'whatsapp');
     if (history.replaceState) history.replaceState(null, '', '#' + tab);
+  }
+
+  async function loadWhatsappTab() {
+    const view = document.getElementById('view-whatsapp');
+    if (!waFragmentLoaded) {
+      try {
+        const r = await fetch('/whatsapp.html', { cache: 'no-store' });
+        if (!r.ok) throw new Error('fragment fetch failed: ' + r.status);
+        const html = await r.text();
+        view.innerHTML = html;
+        // Re-executa <script> inline (innerHTML não roda script por padrão)
+        view.querySelectorAll('script').forEach(old => {
+          const s = document.createElement('script');
+          if (old.src) s.src = old.src;
+          else s.textContent = old.textContent;
+          old.parentNode.replaceChild(s, old);
+        });
+        waFragmentLoaded = true;
+      } catch (e) {
+        view.innerHTML = '<div class="loading" style="color:var(--danger)">Erro ao carregar WhatsApp: ' + (e && e.message || e) + '</div>';
+      }
+    } else if (window.waOnTabEnter) {
+      window.waOnTabEnter();
+    }
   }
   window.addEventListener('hashchange', () => {
     const t = (location.hash || '').slice(1);
@@ -3705,7 +3958,7 @@
           <textarea name="descricao_breve" placeholder="ex: porcelana toile azul + xícara Le Creuset">${descVal}</textarea>
         </div>
         ${tagsHint}
-        <button type="submit" class="btn-novo" style="width:100%; margin-top: 8px;">Cadastrar</button>
+        <button type="submit" class="btn-dark" style="width:100%; margin-top: 8px;">Cadastrar</button>
       </form>
     `;
     document.getElementById('modal-overlay').classList.add('show');
@@ -3859,7 +4112,7 @@
             </label>
           </div>
 
-          <button type="button" class="btn btn-banner" id="btn-banner-${p.id}" onclick="gerarBannerIA(${p.id})">
+          <button type="button" class="btn btn-dark" id="btn-banner-${p.id}" onclick="gerarBannerIA(${p.id})">
             <span style="font-size: 15px;">Criar banner VIP com IA</span>
           </button>
           <p class="hint-banner">Foto + texto (haus., produto, coleção, preço, CTA) em 1 imagem pronta para postar.</p>
@@ -3875,7 +4128,7 @@
               <label>Quantas por estilo</label>
               <input type="number" id="n-por-preset" value="1" min="1" max="3">
             </div>
-            <button type="button" class="btn-secondary-alt" id="btn-tratar" onclick="tratarTodas(${p.id})">Gerar versão sem texto</button>
+            <button type="button" class="btn-ghost" id="btn-tratar" onclick="tratarTodas(${p.id})">Gerar versão sem texto</button>
           </details>
 
           <details class="avancado">
@@ -3914,13 +4167,13 @@
         <div class="captions-block" id="captions-block-${p.id}">
           <div class="captions-head">
             <h4>Legendas para postagem</h4>
-            <button type="button" class="btn-secondary-alt" id="btn-captions-${p.id}" onclick="gerarCaptions(${p.id})">Gerar com IA</button>
+            <button type="button" class="btn-ghost" id="btn-captions-${p.id}" onclick="gerarCaptions(${p.id})">Gerar com IA</button>
           </div>
           <div id="captions-content-${p.id}" class="captions-content"></div>
 
           <div class="pacote-block">
             <p class="pacote-hint">Quando estiver pronto, gere um pacote .zip com banners + legendas para baixar e postar.</p>
-            <button type="button" class="btn-banner" id="btn-pacote-${p.id}" onclick="gerarPacote(${p.id})">
+            <button type="button" class="btn-dark" id="btn-pacote-${p.id}" onclick="gerarPacote(${p.id})">
               <span style="font-size: 14px;">Baixar pacote completo (.zip)</span>
             </button>
           </div>
@@ -4761,7 +5014,7 @@
       </p>
       <input type="file" id="csv-file-input" accept=".csv" style="margin-bottom: 12px; font-size: 13px;">
       <div>
-        <button type="button" class="btn-novo" onclick="previewCsv()">Pré-visualizar</button>
+        <button type="button" class="btn-dark" onclick="previewCsv()">Pré-visualizar</button>
       </div>
       <div id="csv-preview-result" style="margin-top: 16px;"></div>
     `;
@@ -4823,7 +5076,7 @@
       ${validList ? `<details><summary style="cursor:pointer; font-size:12px; color:var(--ink-soft); margin-bottom:8px;">Mostrar 10 primeiros válidos</summary><ul style="font-size:12px; padding-left:18px; line-height:1.7; color:var(--ink-soft);">${validList}</ul></details>` : ''}
       <div class="csv-actions">
         <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
-        <button type="button" class="btn-novo" id="btn-commit-csv" onclick="commitCsv()" ${podeImportar ? '' : 'disabled'}>
+        <button type="button" class="btn-dark" id="btn-commit-csv" onclick="commitCsv()" ${podeImportar ? '' : 'disabled'}>
           ${podeImportar ? `Confirmar import de ${data.validos} leads` : 'Nada para importar'}
         </button>
       </div>
@@ -5376,7 +5629,7 @@
         <div class="conc-empty">
           <h3>Conheça o terreno antes de plantar</h3>
           <p>Cole o link de um perfil concorrente no Instagram e a Haus recebe um raio-X estratégico: posicionamento, padrões de top posts, gaps que valem explorar e parcerias potenciais.</p>
-          <button type="button" class="btn-novo" onclick="abrirModalAnalisarConc()">+ Analisar primeiro concorrente</button>
+          <button type="button" class="btn-dark" onclick="abrirModalAnalisarConc()">+ Analisar primeiro concorrente</button>
         </div>`;
       return;
     }
@@ -5421,7 +5674,7 @@
           padrões do que funciona pra esse perfil e oportunidades pra Haus.
         </p>
 
-        <button type="submit" id="btn-analisar" class="btn-novo btn-block" disabled>
+        <button type="submit" id="btn-analisar" class="btn-dark btn-block" disabled>
           Gerar análise
         </button>
       </form>
@@ -5792,7 +6045,7 @@
         <div class="vendas-empty">
           <h3>Ainda sem clientes registrados</h3>
           <p>Quando uma lead virar venda — pela DM, pelo grupo VIP ou na loja física — registre aqui. O painel calcula LTV, ticket médio e recompra automaticamente.</p>
-          <button type="button" class="btn-novo" onclick="abrirModalNovaVenda()">+ Registrar primeira venda</button>
+          <button type="button" class="btn-dark" onclick="abrirModalNovaVenda()">+ Registrar primeira venda</button>
         </div>`;
       return;
     }
@@ -5858,7 +6111,7 @@
           <label>Notas (opcional)</label>
           <textarea id="venda-notas" placeholder="Ex: queria a versão branca · deu de presente · vai retornar pelo box natalino"></textarea>
         </div>
-        <button type="submit" class="btn-novo btn-block">Registrar</button>
+        <button type="submit" class="btn-dark btn-block">Registrar</button>
       </form>
     `;
     document.getElementById('modal-overlay').classList.add('show');
@@ -5962,7 +6215,7 @@
         <h3><span class="accent">◆</span> Histórico de pedidos</h3>
         ${pedidosHtml}
         <div style="margin-top: 16px; text-align: right;">
-          <button type="button" class="btn-novo" onclick="abrirModalNovaVenda('${escapeHtml(c.username)}', '${escapeHtml(plataforma)}')">+ Nova venda deste cliente</button>
+          <button type="button" class="btn-dark" onclick="abrirModalNovaVenda('${escapeHtml(c.username)}', '${escapeHtml(plataforma)}')">+ Nova venda deste cliente</button>
         </div>
       </div>
     `;
@@ -5983,11 +6236,40 @@
     }
   }
 
+  // ============= APP STATUS (Online/Offline) =============
+  // Pinga /api/wa/status (que checa a Evolution) e mostra dot verde/vermelho.
+  // Em paralelo, qualquer falha de fetch global vira "offline" temporário.
+  async function appStatusCheck() {
+    const el = document.getElementById('app-status');
+    const txt = document.getElementById('app-status-text');
+    if (!el) return;
+    try {
+      const r = await fetch('/api/wa/status', { cache: 'no-store' });
+      const j = await r.json();
+      const ok = j.ok && j.evolution &&
+                 (j.evolution.state === 'open' ||
+                  (j.evolution.instance && j.evolution.instance.state === 'open'));
+      el.classList.toggle('offline', !ok);
+      if (txt) txt.textContent = ok ? 'Online' : 'WhatsApp offline';
+      el.title = ok ? 'Sistema online — WhatsApp conectado'
+                    : 'WhatsApp não conectado (verifique a Evolution)';
+    } catch (e) {
+      el.classList.add('offline');
+      if (txt) txt.textContent = 'Servidor offline';
+      el.title = 'Não foi possível contatar o painel';
+    }
+  }
+  document.getElementById('app-user').addEventListener('click', () => {
+    toast('Logada como Atendimento (admin) — multi-usuário entra na v2');
+  });
+
   // ============= INIT =============
   loadStats();
   loadQueue();
   if (initialTab !== 'outbound') setTab(initialTab);
+  appStatusCheck();
   setInterval(loadStats, 30000); // atualiza stats a cada 30s
+  setInterval(appStatusCheck, 12000); // status a cada 12s
 </script>
 
 </body>

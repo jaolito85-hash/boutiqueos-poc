@@ -1,0 +1,24 @@
+# Dependências do projeto haus outbound + agente WhatsApp.
+# Instalar: pip install -r requirements.txt
+
+# Servidor web
+flask>=3.0
+flask-cors>=4.0
+werkzeug>=3.0
+
+# Banco — sqlite3 é stdlib
+
+# IA
+openai>=1.50
+
+# Scraping (competitor_intel)
+apify-client>=1.7
+
+# HTTP
+requests>=2.31
+
+# Agente WhatsApp — followups agendados
+apscheduler>=3.10
+
+# .env loader (opcional — pode ser carregado via shell)
+python-dotenv>=1.0

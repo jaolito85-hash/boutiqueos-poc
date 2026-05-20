@@ -275,6 +275,101 @@ CREATE INDEX IF NOT EXISTS idx_sm_prospect ON sent_messages(prospect_id);
 CREATE INDEX IF NOT EXISTS idx_sm_template ON sent_messages(template_origem);
 CREATE INDEX IF NOT EXISTS idx_sm_outcome ON sent_messages(outcome);
 CREATE INDEX IF NOT EXISTS idx_sm_sent_at ON sent_messages(sent_at);
+
+-- ============================================================================
+-- WHATSAPP — agente de IA + handoff humano
+-- ============================================================================
+
+-- Contato unificado por número de WhatsApp. Pode estar opcionalmente vinculado
+-- a um prospect do funil de Instagram (preenchido manual no MVP).
+CREATE TABLE IF NOT EXISTS wa_contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT UNIQUE NOT NULL,
+    nome_exibicao TEXT,
+    prospect_id INTEGER,                            -- FK opcional pra prospects.id
+    perfil_json TEXT,                                -- JSON: cidade, interesses[], ultima_intencao, etc
+    mode TEXT NOT NULL DEFAULT 'ai',                 -- ai | human
+    status TEXT NOT NULL DEFAULT 'ativo',            -- ativo | silenciado | bloqueado
+    unread_count INTEGER DEFAULT 0,
+    primeira_msg_at TIMESTAMP,
+    ultima_msg_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (prospect_id) REFERENCES prospects(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_contacts_phone ON wa_contacts(phone);
+CREATE INDEX IF NOT EXISTS idx_wa_contacts_ultima ON wa_contacts(ultima_msg_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wa_contacts_mode ON wa_contacts(mode);
+CREATE INDEX IF NOT EXISTS idx_wa_contacts_status ON wa_contacts(status);
+
+-- Mensagens trocadas, ambos os sentidos. role='tool' guarda chamadas do agente
+-- para auditoria (input/output do LLM, tool calls).
+CREATE TABLE IF NOT EXISTS wa_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL,
+    role TEXT NOT NULL,                              -- user | assistant | tool | note
+    content TEXT,
+    media_url TEXT,
+    media_type TEXT,                                 -- image | audio | document | video
+    direction TEXT NOT NULL,                         -- in | out
+    provider_message_id TEXT,                        -- id do WhatsApp (Evolution/Z-API) — UNIQUE pra idempotência
+    status TEXT,                                     -- sent | delivered | read | failed
+    tool_name TEXT,
+    tool_args_json TEXT,
+    raw_json TEXT,                                   -- payload bruto do webhook pra debug
+    audit_score INTEGER DEFAULT 0,                   -- incrementa quando Aline marca como ruim
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES wa_contacts(id) ON DELETE CASCADE,
+    UNIQUE (provider_message_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_msgs_contact ON wa_messages(contact_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wa_msgs_role ON wa_messages(role);
+CREATE INDEX IF NOT EXISTS idx_wa_msgs_direction ON wa_messages(direction);
+
+-- Rolling summary: a cada N mensagens, gera resumo da conversa pra caber no
+-- system prompt sem estourar contexto.
+CREATE TABLE IF NOT EXISTS wa_summaries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL,
+    summary TEXT NOT NULL,
+    msgs_count_at_summary INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES wa_contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_sum_contact ON wa_summaries(contact_id, created_at DESC);
+
+-- Auditoria de handoffs (quando IA escalonou ou humano assumiu).
+CREATE TABLE IF NOT EXISTS wa_handoffs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL,
+    reason TEXT,
+    requested_by TEXT NOT NULL,                      -- agent | human
+    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES wa_contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_handoffs_contact ON wa_handoffs(contact_id);
+CREATE INDEX IF NOT EXISTS idx_wa_handoffs_open ON wa_handoffs(closed_at) WHERE closed_at IS NULL;
+
+-- Followups agendados (lembretes que o agente ou a Aline programa).
+CREATE TABLE IF NOT EXISTS wa_followups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL,
+    run_at TIMESTAMP NOT NULL,
+    texto TEXT NOT NULL,
+    created_by TEXT NOT NULL,                        -- agent | human
+    status TEXT NOT NULL DEFAULT 'pending',          -- pending | executed | cancelled | failed
+    executed_at TIMESTAMP,
+    error_msg TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contact_id) REFERENCES wa_contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_fup_due ON wa_followups(status, run_at);
+CREATE INDEX IF NOT EXISTS idx_wa_fup_contact ON wa_followups(contact_id);
 """
 
 # Migrations para bancos já existentes (idempotente — captura OperationalError quando a coluna já existe)
@@ -1989,6 +2084,172 @@ def count_competitor_runs_today() -> int:
             WHERE run_date = DATE('now', 'localtime')
         """).fetchone()
         return int(row["n"] or 0)
+    finally:
+        conn.close()
+
+
+# ============================================================================
+# OPERAÇÕES — WHATSAPP
+# ============================================================================
+
+def upsert_wa_contact(phone: str, nome_exibicao: str | None = None) -> int:
+    """Cria contato se não existir, devolve id. Atualiza nome se ainda não tinha."""
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT id, nome_exibicao FROM wa_contacts WHERE phone = ?", (phone,)).fetchone()
+        if row:
+            if nome_exibicao and not row["nome_exibicao"]:
+                conn.execute("UPDATE wa_contacts SET nome_exibicao = ? WHERE id = ?", (nome_exibicao, row["id"]))
+                conn.commit()
+            return int(row["id"])
+        cur = conn.execute(
+            "INSERT INTO wa_contacts (phone, nome_exibicao, primeira_msg_at, ultima_msg_at) "
+            "VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+            (phone, nome_exibicao),
+        )
+        conn.commit()
+        return int(cur.lastrowid)
+    finally:
+        conn.close()
+
+
+def record_wa_message(
+    contact_id: int,
+    role: str,                    # user | assistant | tool | note
+    direction: str,                # in | out
+    content: str | None = None,
+    media_url: str | None = None,
+    media_type: str | None = None,
+    provider_message_id: str | None = None,
+    status: str | None = None,
+    tool_name: str | None = None,
+    tool_args_json: str | None = None,
+    raw_json: str | None = None,
+) -> int | None:
+    """Insere mensagem. Devolve id, ou None se já existia (UNIQUE de provider_message_id)."""
+    conn = get_connection()
+    try:
+        try:
+            cur = conn.execute(
+                """INSERT INTO wa_messages
+                   (contact_id, role, content, media_url, media_type, direction,
+                    provider_message_id, status, tool_name, tool_args_json, raw_json)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (contact_id, role, content, media_url, media_type, direction,
+                 provider_message_id, status, tool_name, tool_args_json, raw_json),
+            )
+        except sqlite3.IntegrityError:
+            # já existe (mesmo provider_message_id) — idempotente
+            return None
+        msg_id = int(cur.lastrowid)
+        # Atualiza ultima_msg_at sempre, e unread_count só quando entra msg do cliente
+        if direction == "in":
+            conn.execute(
+                "UPDATE wa_contacts SET ultima_msg_at = CURRENT_TIMESTAMP, "
+                "unread_count = unread_count + 1 WHERE id = ?",
+                (contact_id,),
+            )
+        else:
+            conn.execute(
+                "UPDATE wa_contacts SET ultima_msg_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (contact_id,),
+            )
+        conn.commit()
+        return msg_id
+    finally:
+        conn.close()
+
+
+def get_wa_contacts(status: str = "ativo", limit: int = 200):
+    """Lista contatos pra UI, ordenados por última msg."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """SELECT c.*, (
+                  SELECT content FROM wa_messages
+                  WHERE contact_id = c.id ORDER BY id DESC LIMIT 1
+                ) AS last_msg_preview
+               FROM wa_contacts c
+               WHERE status = ?
+               ORDER BY ultima_msg_at DESC NULLS LAST
+               LIMIT ?""",
+            (status, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_wa_messages(contact_id: int, limit: int = 50, before_id: int | None = None):
+    """Histórico de mensagens (ordenado mais antigo → mais novo no resultado)."""
+    conn = get_connection()
+    try:
+        if before_id:
+            rows = conn.execute(
+                "SELECT * FROM wa_messages WHERE contact_id = ? AND id < ? "
+                "ORDER BY id DESC LIMIT ?",
+                (contact_id, before_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM wa_messages WHERE contact_id = ? "
+                "ORDER BY id DESC LIMIT ?",
+                (contact_id, limit),
+            ).fetchall()
+        return [dict(r) for r in reversed(rows)]
+    finally:
+        conn.close()
+
+
+def set_wa_mode(contact_id: int, mode: str, reason: str | None = None,
+                requested_by: str = "human") -> None:
+    """Muda mode (ai|human). Se virar 'human', abre wa_handoffs. Se virar 'ai',
+    fecha handoff aberto se existir."""
+    if mode not in ("ai", "human"):
+        raise ValueError(f"mode inválido: {mode}")
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE wa_contacts SET mode = ? WHERE id = ?", (mode, contact_id))
+        if mode == "human":
+            conn.execute(
+                "INSERT INTO wa_handoffs (contact_id, reason, requested_by) VALUES (?, ?, ?)",
+                (contact_id, reason, requested_by),
+            )
+        else:
+            conn.execute(
+                "UPDATE wa_handoffs SET closed_at = CURRENT_TIMESTAMP "
+                "WHERE contact_id = ? AND closed_at IS NULL",
+                (contact_id,),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def mark_wa_read(contact_id: int) -> None:
+    """Zera unread quando Aline abre a thread."""
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE wa_contacts SET unread_count = 0 WHERE id = ?", (contact_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_wa_contact(contact_id: int) -> dict | None:
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM wa_contacts WHERE id = ?", (contact_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_wa_contact_by_phone(phone: str) -> dict | None:
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM wa_contacts WHERE phone = ?", (phone,)).fetchone()
+        return dict(row) if row else None
     finally:
         conn.close()
 

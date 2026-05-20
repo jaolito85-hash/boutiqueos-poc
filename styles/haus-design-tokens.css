@@ -1,0 +1,190 @@
+/* ============================================================
+   HAUS. STUDIO — DESIGN TOKENS
+   Sistema de design do painel. Use este arquivo como a
+   "fonte da verdade" do visual. Importe no topo do projeto.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. FONTES
+   Importe no <head> do HTML (antes de qualquer CSS):
+
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+
+   - Fraunces (serif): números, títulos, nomes, footer. É o charme.
+   - Jost (sans): textos, labels, botões. Discreta, não compete.
+   ------------------------------------------------------------ */
+
+:root{
+  /* ---- CORES ---- */
+  --bg:        #E9E4D6;   /* fundo geral, bege quente */
+  --card:      #FBFAF6;   /* fundo dos cards, off-white quente */
+  --card-alt:  #F4F0E4;   /* cards secundários / hover */
+  --ink:       #2E2E2A;   /* texto principal, quase-preto quente */
+  --ink-soft:  #6F6D63;   /* texto secundário */
+  --ink-faint: #9A988C;   /* texto bem suave (footer, labels) */
+  --green:     #3E5C3A;   /* cor primária, verde musgo */
+  --green-soft:#5C7A52;   /* verde mais claro */
+  --green-bg:  #E4ECDD;   /* fundo verde clarinho (avatares, badges) */
+  --gold:      #C49A3A;   /* destaque / CTA, dourado mostarda */
+  --gold-bg:   #F6ECD2;   /* fundo dourado clarinho */
+  --coral:     #D9654F;   /* alerta (ex: WhatsApp offline) */
+  --line:      rgba(46,46,42,.12);  /* bordas */
+  --line-soft: rgba(46,46,42,.07);  /* bordas mais suaves */
+
+  /* ---- FONTES ---- */
+  --font-serif: 'Fraunces', serif;
+  --font-sans:  'Jost', sans-serif;
+
+  /* ---- RAIO DE BORDA ---- */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-pill: 999px;
+}
+
+/* ------------------------------------------------------------
+   2. BASE
+   ------------------------------------------------------------ */
+body{
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Classes utilitárias pra aplicar a serif onde quiser */
+.serif{ font-family: var(--font-serif); }
+.italic{ font-style: italic; }
+
+/* Label padrão (aquele textinho em CAPS espaçado) */
+.label{
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------
+   3. FOOTER  ← o que você gostou
+   Limpo: centralizado, cinza suave, fonte pequena,
+   separador "·", SEM pílula, SEM caixa, SEM borda.
+   ------------------------------------------------------------ */
+.foot-note{
+  margin-top: 30px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+/* Uso no HTML:
+   <div class="foot-note">haus. studio · painel interno · 2026</div>
+   (o "·" é o ponto-do-meio — copie ele: · ) */
+
+/* ------------------------------------------------------------
+   4. BOTÕES / PILLS  ← substitui as pills "pesadas"
+   Regra de ouro: fundo transparente + borda fininha + cor só no hover.
+   ------------------------------------------------------------ */
+
+/* Botão fantasma (padrão pra maioria das ações) */
+.btn-ghost{
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 8px 15px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: .15s;
+}
+.btn-ghost:hover{
+  background: var(--card-alt);
+  border-color: var(--ink-soft);
+}
+
+/* Botão dourado (pra ação principal de destaque) */
+.btn-gold{
+  background: var(--gold);
+  color: #3a2e08;
+  border: none;
+  font-weight: 600;
+}
+.btn-gold:hover{ background: #b88c2c; }
+
+/* Botão escuro (pra "+ Novo" e afins) */
+.btn-dark{
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 13px 22px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.btn-dark:hover{ background: #000; }
+
+/* ------------------------------------------------------------
+   5. CARD DE MÉTRICA  ← os números bonitos
+   ------------------------------------------------------------ */
+.metric{
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 22px 24px;
+  border: 1px solid var(--line-soft);
+}
+.metric.hl{                       /* versão destaque (dourado) */
+  background: var(--gold-bg);
+  border-color: rgba(196,154,58,.3);
+}
+.metric .n{                       /* o número — em serif itálica! */
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1;
+}
+.metric .label{ margin-top: 10px; }
+
+/* ------------------------------------------------------------
+   6. NAV EM PÍLULA (o menu do topo)
+   ------------------------------------------------------------ */
+.nav{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--card);
+  border-radius: var(--radius-pill);
+  padding: 6px;
+}
+.nav a{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  cursor: pointer;
+  transition: .15s;
+}
+.nav a:hover{ background: var(--card-alt); color: var(--ink); }
+.nav a.active{ background: var(--green); color: #fff; font-weight: 500; }
+
+/* Títulos de seção em serif itálica */
+.sec-title{
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 14px;
+}

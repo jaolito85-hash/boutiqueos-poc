@@ -38,6 +38,8 @@ from prospects_review import bp_review
 from competitor_panel import bp_competitor
 from insights import bp_insights
 from sales_panel import bp_sales
+from wa.webhook import bp_wa_webhook
+from wa.api import bp_wa_api
 import json
 
 app = Flask(__name__, static_folder="painel", static_url_path="")
@@ -46,6 +48,8 @@ app.register_blueprint(bp_catalogo)
 app.register_blueprint(bp_leads)
 app.register_blueprint(bp_review)
 app.register_blueprint(bp_competitor)
+app.register_blueprint(bp_wa_webhook)
+app.register_blueprint(bp_wa_api)
 app.register_blueprint(bp_insights)
 app.register_blueprint(bp_sales)
 
