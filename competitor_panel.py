@@ -244,6 +244,158 @@ def api_diff(handle):
         return jsonify({"ok": False, "error": str(e)}), 404
 
 
+@bp_competitor.route("/api/concorrentes/<source_handle>/parceria/virar-lead", methods=["POST"])
+def api_parceria_virar_lead(source_handle):
+    """Cria um prospect REVIEW a partir de uma parceria sugerida pela IA.
+
+    Body: { handle, tipo?, porque?, plataforma? (default instagram) }
+
+    Idempotente: se já existe (plataforma, username), retorna already_exists.
+    """
+    source = extract_handle(source_handle)
+    if not source:
+        return jsonify({"ok": False, "error": "source_handle inválido"}), 400
+
+    body = request.get_json(silent=True) or {}
+    raw_handle = body.get("handle") or ""
+    handle = extract_handle(raw_handle)
+    if not handle:
+        return jsonify({"ok": False, "error": "handle da parceria inválido"}), 400
+
+    plataforma = (body.get("plataforma") or "instagram").lower().strip()
+    if plataforma not in ("instagram", "tiktok"):
+        plataforma = "instagram"
+
+    tipo = (body.get("tipo") or "").strip() or None
+    porque = (body.get("porque") or "").strip() or None
+
+    from database import save_imported_prospect, prospect_exists
+    from leads_import import TEMPLATE_PARCERIA
+
+    if prospect_exists(plataforma, handle):
+        return jsonify({
+            "ok": True,
+            "already_exists": True,
+            "plataforma": plataforma,
+            "username": handle,
+        })
+
+    raw_data = {
+        "imported_source": "competitor_partnership",
+        "source_concorrente": source,
+        "tipo_parceria": tipo,
+        "porque": porque,
+    }
+    sinais = ["from_competitor:" + source, "parceria_potencial"]
+    if tipo:
+        sinais.append("tipo:" + tipo)
+    razoes = [porque] if porque else []
+
+    resultado = save_imported_prospect(
+        plataforma=plataforma,
+        username=handle,
+        external_id=None,
+        source_loja="competitor:" + source,
+        cidade_loja=None,
+        score=7,  # parceria entra com score médio-alto (curadoria da IA)
+        confianca="media",
+        razoes=razoes,
+        mensagem=TEMPLATE_PARCERIA,
+        sinais=sinais,
+        raw_data=raw_data,
+        status="REVIEW",
+    )
+    return jsonify({
+        "ok": True,
+        "already_exists": False,
+        "result": resultado,
+        "plataforma": plataforma,
+        "username": handle,
+        "tipo": tipo,
+    })
+
+
+@bp_competitor.route("/api/ideas", methods=["GET"])
+def api_ideas_list():
+    """Lista ideias (default: pending)."""
+    from database import list_content_ideas, count_pending_ideas
+    status = request.args.get("status", "pending")
+    if status not in ("pending", "used", "dismissed", "all"):
+        return jsonify({"ok": False, "error": "status inválido"}), 400
+    try:
+        limit = int(request.args.get("limit", 50))
+        limit = max(1, min(200, limit))
+    except ValueError:
+        limit = 50
+    return jsonify({
+        "ok": True,
+        "items": list_content_ideas(status=status, limit=limit),
+        "pending_count": count_pending_ideas(),
+    })
+
+
+@bp_competitor.route("/api/ideas/from-competitor", methods=["POST"])
+def api_ideas_create():
+    """Salva uma ideia vinda da análise de concorrente.
+
+    Body: { source_handle, acao, imitabilidade?, esforco?, racional? }
+    """
+    body = request.get_json(silent=True) or {}
+    source_handle = extract_handle(body.get("source_handle") or "")
+    acao = (body.get("acao") or "").strip()
+    if not source_handle:
+        return jsonify({"ok": False, "error": "source_handle inválido"}), 400
+    if not acao:
+        return jsonify({"ok": False, "error": "acao obrigatória"}), 400
+    imitabilidade = (body.get("imitabilidade") or "").strip().lower() or None
+    if imitabilidade and imitabilidade not in ("copiar", "adaptar", "evitar"):
+        imitabilidade = None
+    if imitabilidade == "evitar":
+        return jsonify({"ok": False, "error": "ideias 'evitar' não devem ser salvas"}), 400
+    esforco = (body.get("esforco") or "").strip().lower() or None
+    if esforco and esforco not in ("baixo", "medio", "alto"):
+        esforco = None
+    racional = (body.get("racional") or "").strip() or None
+
+    from database import save_content_idea
+    resultado = save_content_idea(
+        source_handle=source_handle,
+        acao=acao,
+        imitabilidade=imitabilidade,
+        esforco=esforco,
+        racional=racional,
+    )
+    return jsonify({
+        "ok": True,
+        "duplicada": resultado == "duplicada",
+        "source_handle": source_handle,
+    })
+
+
+@bp_competitor.route("/api/ideas/<int:idea_id>/dismiss", methods=["POST"])
+def api_ideas_dismiss(idea_id):
+    from database import mark_idea_dismissed
+    if not mark_idea_dismissed(idea_id):
+        return jsonify({"ok": False, "error": "ideia não encontrada ou já não-pending"}), 404
+    return jsonify({"ok": True})
+
+
+@bp_competitor.route("/api/ideas/<int:idea_id>/use", methods=["POST"])
+def api_ideas_use(idea_id):
+    """Marca a ideia como usada e linka pro produto criado.
+    Body: { product_id }
+    """
+    body = request.get_json(silent=True) or {}
+    try:
+        product_id = int(body.get("product_id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "product_id obrigatório"}), 400
+    from database import mark_idea_used
+    if not mark_idea_used(idea_id, product_id):
+        return jsonify({"ok": False, "error": "ideia não encontrada ou já não-pending"}), 404
+    return jsonify({"ok": True})
+
+
 @bp_competitor.route("/api/concorrentes/<handle>", methods=["DELETE"])
 def api_delete(handle):
     handle = extract_handle(handle)

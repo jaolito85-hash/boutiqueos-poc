@@ -223,6 +223,58 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS idx_orders_prospect ON orders(prospect_id);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_canal ON orders(canal);
+
+-- ============================================================================
+-- CONTENT IDEAS — Fase 2 #3: oportunidades do competitor viram backlog de posts
+-- ============================================================================
+-- Cada ideia nasce de uma `oportunidade_haus` da análise de concorrente.
+-- Aline aprova/usa/descarta. Quando vira produto, linka via product_id.
+
+CREATE TABLE IF NOT EXISTS content_ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_handle TEXT NOT NULL,
+    source_plataforma TEXT NOT NULL DEFAULT 'instagram',
+    acao TEXT NOT NULL,
+    imitabilidade TEXT,
+    esforco TEXT,
+    racional TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    product_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    used_at TIMESTAMP,
+    UNIQUE(source_handle, acao)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ideas_status ON content_ideas(status);
+CREATE INDEX IF NOT EXISTS idx_ideas_source ON content_ideas(source_handle);
+
+-- ============================================================================
+-- SENT MESSAGES — Fase 2 #4: snapshot pra ranking de templates que convertem
+-- ============================================================================
+-- Cada vez que a Aline marca "enviei", guardamos:
+--   - snapshot exato do texto que saiu (sem editar mesmo se prospect mudar depois)
+--   - template_origem inferido (perguntando_preco / buscando_atendimento /
+--     perguntando_local / parceria_competitor / agente_ia)
+--   - se a Aline editou o template antes de enviar
+-- Quando o lead vira REPLIED/ENTERED_GROUP/CUSTOMER, marcamos outcome.
+-- Permite ranking: "templates que mais convertem".
+
+CREATE TABLE IF NOT EXISTS sent_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    prospect_id INTEGER NOT NULL,
+    mensagem TEXT NOT NULL,
+    template_origem TEXT,
+    foi_editada INTEGER DEFAULT 0,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    outcome TEXT,            -- replied | entered_group | customer (preenchido depois)
+    outcome_at TIMESTAMP,
+    FOREIGN KEY (prospect_id) REFERENCES prospects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sm_prospect ON sent_messages(prospect_id);
+CREATE INDEX IF NOT EXISTS idx_sm_template ON sent_messages(template_origem);
+CREATE INDEX IF NOT EXISTS idx_sm_outcome ON sent_messages(outcome);
+CREATE INDEX IF NOT EXISTS idx_sm_sent_at ON sent_messages(sent_at);
 """
 
 # Migrations para bancos já existentes (idempotente — captura OperationalError quando a coluna já existe)
@@ -671,22 +723,120 @@ def get_ready_queue(limit=30):
         conn.close()
 
 
-def mark_as_sent(username: str):
-    """Aline confirma que enviou a DM."""
+def _derive_template_origin(sinais_raw, source_loja: str | None) -> str:
+    """Inferir qual template foi a base da mensagem enviada.
+
+    Convenções:
+      - parceria_competitor → lead vindo de oportunidade de concorrente
+      - perguntando_preco / buscando_atendimento / perguntando_local → CSV import
+      - agente_ia → lead vindo do scraper Apify + agente IA
+    """
+    sinais: list = []
+    if isinstance(sinais_raw, str) and sinais_raw:
+        try:
+            sinais = json.loads(sinais_raw)
+        except Exception:
+            sinais = []
+    elif isinstance(sinais_raw, list):
+        sinais = sinais_raw
+    if "parceria_potencial" in sinais:
+        return "parceria_competitor"
+    for s in sinais:
+        if isinstance(s, str) and s.startswith("intent_"):
+            intent = s[len("intent_"):]
+            if intent in ("perguntando_preco", "buscando_atendimento", "perguntando_local"):
+                return intent
+    # fallback — outbound automatizado via scraper + IA
+    if source_loja and not source_loja.startswith("competitor:") and source_loja != "csv_import":
+        return "agente_ia"
+    return "outro"
+
+
+def save_sent_message(prospect_id: int, mensagem: str, template_origem: str,
+                      foi_editada: bool = False) -> int:
+    """Salva o snapshot da mensagem que saiu (Fase 2 #4)."""
     conn = get_connection()
     try:
+        cur = conn.execute("""
+            INSERT INTO sent_messages
+                (prospect_id, mensagem, template_origem, foi_editada, sent_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (prospect_id, mensagem, template_origem,
+              1 if foi_editada else 0, datetime.now().isoformat()))
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def update_outcome_for_prospect(prospect_id: int, outcome: str) -> int:
+    """Marca outcome na ÚLTIMA sent_message do prospect que ainda não tem.
+
+    outcome ∈ replied | entered_group | customer. Aceita sobrescrever
+    pra outcome 'maior' (replied → customer faz sentido).
+    """
+    if outcome not in ("replied", "entered_group", "customer"):
+        raise ValueError(f"outcome inválido: {outcome}")
+    conn = get_connection()
+    try:
+        row = conn.execute("""
+            SELECT id, outcome FROM sent_messages
+            WHERE prospect_id = ?
+            ORDER BY sent_at DESC LIMIT 1
+        """, (prospect_id,)).fetchone()
+        if not row:
+            return 0
+        # outcome rank — só sobrescreve se o novo for "maior"
+        rank = {None: 0, "replied": 1, "entered_group": 2, "customer": 3}
+        if rank.get(outcome, 0) <= rank.get(row["outcome"], 0):
+            return 0
+        cur = conn.execute("""
+            UPDATE sent_messages
+               SET outcome = ?, outcome_at = ?
+             WHERE id = ?
+        """, (outcome, datetime.now().isoformat(), row["id"]))
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
+
+
+def mark_as_sent(username: str, mensagem_enviada: str | None = None,
+                 plataforma: str = "instagram") -> bool:
+    """Aline confirma que enviou a DM.
+
+    Se `mensagem_enviada` for fornecida, salva snapshot em sent_messages
+    e marca foi_editada se difere da `prospects.mensagem` original.
+    """
+    conn = get_connection()
+    try:
+        # Pega contexto do prospect pra inferir template_origem e detectar edição
+        row = conn.execute("""
+            SELECT id, mensagem, sinais, source_loja
+            FROM prospects WHERE plataforma = ? AND username = ?
+        """, (plataforma, username)).fetchone()
+        if not row:
+            return False
         now = datetime.now()
         conn.execute("""
             UPDATE prospects SET
                 status = 'SENT',
                 sent_at = ?,
                 daily_sent_date = ?
-            WHERE username = ?
-        """, (now.isoformat(), now.date().isoformat(), username))
-        log_event(conn, username, "SENT", {})
+            WHERE id = ?
+        """, (now.isoformat(), now.date().isoformat(), row["id"]))
+        log_event(conn, username, "SENT", {"plataforma": plataforma})
         conn.commit()
     finally:
         conn.close()
+
+    # Snapshot fora do bloco anterior (precisa de get_connection limpo)
+    if mensagem_enviada is not None and mensagem_enviada.strip():
+        template = _derive_template_origin(row["sinais"], row["source_loja"])
+        foi_editada = (mensagem_enviada.strip() != (row["mensagem"] or "").strip())
+        save_sent_message(row["id"], mensagem_enviada.strip(), template, foi_editada)
+
+    return True
 
 
 def mark_as_skipped(username: str):
@@ -719,6 +869,18 @@ def mark_as_not_client(username: str):
 # vindas do painel atual, que ainda envia só o username. Pra leads do TikTok
 # vindos do CSV, o front passa plataforma explicitamente.
 
+def _get_prospect_id(plataforma: str, username: str) -> int | None:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT id FROM prospects WHERE plataforma=? AND username=?",
+            (plataforma, username)
+        ).fetchone()
+        return row["id"] if row else None
+    finally:
+        conn.close()
+
+
 def mark_as_replied(username: str, plataforma: str = "instagram") -> bool:
     """SENT → REPLIED. Aceita pular status (REVIEW/READY) — Aline pode marcar
     direto se a pessoa respondeu antes de a DM ser registrada como enviada."""
@@ -732,9 +894,14 @@ def mark_as_replied(username: str, plataforma: str = "instagram") -> bool:
         if cur.rowcount:
             log_event(conn, username, "REPLIED", {"plataforma": plataforma})
             conn.commit()
-        return cur.rowcount > 0
+        ok = cur.rowcount > 0
     finally:
         conn.close()
+    if ok:
+        pid = _get_prospect_id(plataforma, username)
+        if pid:
+            update_outcome_for_prospect(pid, "replied")
+    return ok
 
 
 def mark_as_entered_group(username: str, plataforma: str = "instagram") -> bool:
@@ -749,9 +916,14 @@ def mark_as_entered_group(username: str, plataforma: str = "instagram") -> bool:
         if cur.rowcount:
             log_event(conn, username, "ENTERED_GROUP", {"plataforma": plataforma})
             conn.commit()
-        return cur.rowcount > 0
+        ok = cur.rowcount > 0
     finally:
         conn.close()
+    if ok:
+        pid = _get_prospect_id(plataforma, username)
+        if pid:
+            update_outcome_for_prospect(pid, "entered_group")
+    return ok
 
 
 def mark_as_customer(username: str, plataforma: str = "instagram",
@@ -771,9 +943,14 @@ def mark_as_customer(username: str, plataforma: str = "instagram",
             log_event(conn, username, "BECAME_CUSTOMER",
                       {"plataforma": plataforma, "valor": valor})
             conn.commit()
-        return cur.rowcount > 0
+        ok = cur.rowcount > 0
     finally:
         conn.close()
+    if ok:
+        pid = _get_prospect_id(plataforma, username)
+        if pid:
+            update_outcome_for_prospect(pid, "customer")
+    return ok
 
 
 # ============================================================================
@@ -1064,6 +1241,44 @@ def activity_timeseries(days: int = 30) -> list[dict]:
     return series
 
 
+def template_ranking(min_sent: int = 1) -> list[dict]:
+    """Ranking de templates por taxa de conversão.
+
+    Retorna [{template_origem, sent, replied, entered_group, customer,
+              reply_rate, group_rate, customer_rate, foi_editada_pct}]
+    ordenado por customer_rate DESC, depois reply_rate DESC.
+    """
+    conn = get_connection()
+    try:
+        rows = conn.execute("""
+            SELECT
+                COALESCE(template_origem, '(sem template)') AS template_origem,
+                COUNT(*) AS sent,
+                SUM(CASE WHEN outcome IN ('replied','entered_group','customer') THEN 1 ELSE 0 END) AS replied,
+                SUM(CASE WHEN outcome IN ('entered_group','customer') THEN 1 ELSE 0 END) AS entered_group,
+                SUM(CASE WHEN outcome = 'customer' THEN 1 ELSE 0 END) AS customer,
+                AVG(CASE WHEN foi_editada = 1 THEN 1.0 ELSE 0.0 END) AS edit_rate
+            FROM sent_messages
+            GROUP BY template_origem
+            HAVING sent >= ?
+        """, (min_sent,)).fetchall()
+    finally:
+        conn.close()
+
+    out = []
+    for r in rows:
+        d = dict(r)
+        sent = d["sent"] or 1
+        d["reply_rate"] = round(d["replied"] / sent, 4)
+        d["group_rate"] = round(d["entered_group"] / sent, 4)
+        d["customer_rate"] = round(d["customer"] / sent, 4)
+        d["foi_editada_pct"] = round((d["edit_rate"] or 0) * 100, 1)
+        del d["edit_rate"]
+        out.append(d)
+    out.sort(key=lambda x: (-x["customer_rate"], -x["reply_rate"], -x["sent"]))
+    return out
+
+
 # ============================================================================
 # VENDAS — orders (recompra) + LTV
 # ============================================================================
@@ -1275,6 +1490,99 @@ def get_customer_by_username(username: str, plataforma: str = "instagram") -> di
     d["summary"] = customer_summary(d["id"])
     d["orders"] = list_orders_by_prospect(d["id"])
     return d
+
+
+# ============================================================================
+# CONTENT IDEAS — Fase 2 #3
+# ============================================================================
+# Cada ideia nasce de uma `oportunidade_haus` da análise de concorrente.
+# Aline pode salvar/dispensar/converter-em-produto.
+
+def save_content_idea(
+    *,
+    source_handle: str,
+    acao: str,
+    imitabilidade: str | None = None,
+    esforco: str | None = None,
+    racional: str | None = None,
+    source_plataforma: str = "instagram",
+) -> str:
+    """Salva uma ideia. Idempotente — duplicata (source_handle, acao) retorna 'duplicada'."""
+    conn = get_connection()
+    try:
+        cur = conn.execute("""
+            INSERT INTO content_ideas (
+                source_handle, source_plataforma, acao, imitabilidade,
+                esforco, racional, status
+            ) VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            ON CONFLICT(source_handle, acao) DO NOTHING
+        """, (source_handle, source_plataforma, acao, imitabilidade,
+              esforco, racional))
+        inserted = cur.rowcount > 0
+        conn.commit()
+        return "inserida" if inserted else "duplicada"
+    finally:
+        conn.close()
+
+
+def list_content_ideas(status: str = "pending", limit: int = 50) -> list[dict]:
+    """Lista ideias por status. status='all' traz tudo."""
+    conn = get_connection()
+    try:
+        if status == "all":
+            rows = conn.execute(
+                "SELECT * FROM content_ideas ORDER BY created_at DESC LIMIT ?",
+                (limit,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM content_ideas WHERE status = ? "
+                "ORDER BY created_at DESC LIMIT ?",
+                (status, limit)
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def count_pending_ideas() -> int:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM content_ideas WHERE status = 'pending'"
+        ).fetchone()
+        return row["n"]
+    finally:
+        conn.close()
+
+
+def mark_idea_used(idea_id: int, product_id: int) -> bool:
+    """Marca ideia como usada e linka pro produto criado."""
+    conn = get_connection()
+    try:
+        cur = conn.execute("""
+            UPDATE content_ideas
+               SET status = 'used', product_id = ?, used_at = ?
+             WHERE id = ? AND status = 'pending'
+        """, (product_id, datetime.now().isoformat(), idea_id))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def mark_idea_dismissed(idea_id: int) -> bool:
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE content_ideas SET status = 'dismissed' "
+            "WHERE id = ? AND status = 'pending'",
+            (idea_id,)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
 
 
 # ============================================================================

@@ -59,6 +59,15 @@ def _serialize_followup(p: dict) -> dict:
     out["intent"] = rd.get("intent")
     out["temperatura"] = rd.get("temperatura")
     out["evidencia"] = rd.get("evidencia") or (out["razoes"][0] if out["razoes"] else None)
+    # Fase 2 #1 — sugestão de produto pra anexar na DM
+    from product_matcher import (
+        match_product_for_lead,
+        extract_text_for_matching,
+        serialize_suggestion,
+    )
+    out["produto_sugerido"] = serialize_suggestion(
+        match_product_for_lead(extract_text_for_matching(out))
+    )
     return out
 
 
@@ -146,3 +155,14 @@ def insights_activity():
     except ValueError:
         days = 30
     return jsonify({"ok": True, "days": days, "items": activity_timeseries(days=days)})
+
+
+@bp_insights.route("/api/insights/template-ranking", methods=["GET"])
+def insights_template_ranking():
+    """Templates que mais convertem (Fase 2 #4)."""
+    from database import template_ranking
+    try:
+        min_sent = int(request.args.get("min_sent", 1))
+    except ValueError:
+        min_sent = 1
+    return jsonify({"ok": True, "items": template_ranking(min_sent=min_sent)})

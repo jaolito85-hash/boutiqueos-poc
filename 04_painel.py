@@ -57,11 +57,17 @@ app.register_blueprint(bp_sales)
 @app.route("/api/queue")
 def api_queue():
     """Fila de prospects prontos pra enviar."""
+    from product_matcher import (
+        match_product_for_lead,
+        extract_text_for_matching,
+        serialize_suggestion,
+    )
     queue = get_ready_queue(limit=30)
-    # Parsear razoes/sinais como JSON
     for p in queue:
         p["razoes"] = json.loads(p["razoes"]) if p.get("razoes") else []
         p["sinais"] = json.loads(p["sinais"]) if p.get("sinais") else []
+        texto = extract_text_for_matching(p)
+        p["produto_sugerido"] = serialize_suggestion(match_product_for_lead(texto))
     return jsonify(queue)
 
 
@@ -73,14 +79,25 @@ def api_stats():
 
 @app.route("/api/action/sent", methods=["POST"])
 def api_action_sent():
-    """Aline confirmou que enviou a DM."""
-    username = request.json.get("username")
+    """Aline confirmou que enviou a DM.
+
+    Body: { username, mensagem? (snapshot do que efetivamente saiu),
+            plataforma? (default 'instagram') }
+    """
+    body = request.get_json(silent=True) or {}
+    username = (body.get("username") or "").strip()
+    mensagem = body.get("mensagem")  # opcional — alimenta sent_messages
+    plataforma = (body.get("plataforma") or "instagram").lower().strip()
+    if not username:
+        return jsonify({"ok": False, "error": "username obrigatório"}), 400
     if not can_send_more_today():
         return jsonify({
             "ok": False,
             "error": f"Limite diário ({DAILY_LIMIT}) atingido. Volte amanhã."
         }), 429
-    mark_as_sent(username)
+    ok = mark_as_sent(username, mensagem_enviada=mensagem, plataforma=plataforma)
+    if not ok:
+        return jsonify({"ok": False, "error": "lead não encontrado"}), 404
     return jsonify({"ok": True})
 
 

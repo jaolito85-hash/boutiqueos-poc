@@ -65,6 +65,18 @@ TEMPLATES_MENSAGEM = {
 }
 TEMPLATE_FALLBACK = TEMPLATES_MENSAGEM["buscando_atendimento"]
 
+# Template específico pra leads vindos de "parcerias potenciais" da análise de
+# concorrentes (Fase 2 #2). Tom de colab/troca, não de venda.
+TEMPLATE_PARCERIA = (
+    "Oii! Sou da equipe da haus, vi seu trabalho aqui e achei que faria "
+    "muito sentido a gente trocar ideia.\n\n"
+    "A haus é boutique de mesa posta, porcelana e Le Creuset em Umuarama-PR. "
+    "Se topar conversar sobre colab, indicação ou só conhecer a marca, "
+    "tem um grupo onde solto novidades primeiro: "
+    + "https://" + cta_link("dm_parceria_concorrente") + "\n\n"
+    "@haus.tableware"
+)
+
 # Heurística de inglês: pelo menos 2 stopwords en E zero stopwords pt
 STOPWORDS_PT = {
     "que", "não", "nao", "com", "para", "pra", "tem", "aqui", "tipo",

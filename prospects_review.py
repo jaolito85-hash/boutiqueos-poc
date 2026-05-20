@@ -57,6 +57,16 @@ def _serialize(p: dict) -> dict:
     out["urgencia"] = rd.get("urgencia")
     out["evidencia"] = rd.get("evidencia") or (out["razoes"][0] if out["razoes"] else None)
     out["texto_original"] = rd.get("texto_original")
+    # Fase 2 #1 — sugestão de produto pra anexar na DM (matching de keywords).
+    # Import lazy pra não pagar load do cache em rotas que não usam.
+    from product_matcher import (
+        match_product_for_lead,
+        extract_text_for_matching,
+        serialize_suggestion,
+    )
+    out["produto_sugerido"] = serialize_suggestion(
+        match_product_for_lead(extract_text_for_matching(out))
+    )
     return out
 
 
